@@ -45,7 +45,8 @@ import { GpuRendererService } from '../../../gpu/renderer/gpu-renderer.service';
       <!-- Shared GPU Renderer Canvas Target -->
       <canvas
         #canvasTarget
-        class="w-full h-full object-cover block transition-opacity duration-400"
+        class="w-full h-full object-cover block transition-all duration-300"
+        [style.transform]="canvasTransform"
         [class.opacity-0]="isLoading()"
         [class.opacity-100]="!isLoading()"
         aria-hidden="true"
@@ -79,6 +80,19 @@ export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
   @Input() exposure = 0.0;
   @Input() watermarkOpacity = 0.0;
   @Input() recipe?: ColorGradeRecipe | null;
+  @Input() rotation = 0;
+  @Input() flipH = false;
+
+  get canvasTransform(): string {
+    const parts: string[] = [];
+    if (this.rotation) {
+      parts.push(`rotate(${this.rotation}deg)`);
+    }
+    if (this.flipH) {
+      parts.push('scaleX(-1)');
+    }
+    return parts.length > 0 ? parts.join(' ') : 'none';
+  }
 
   @ViewChild('canvasTarget', { static: true })
   canvasRef!: ElementRef<HTMLCanvasElement>;

@@ -124,17 +124,74 @@ type InspectorTab = 'info' | 'retouch' | 'grade' | 'publish';
 
         <!-- Column 2: Centre Canvas Viewport -->
         <main class="flex-1 bg-black flex flex-col relative overflow-hidden" role="region" aria-label="Darkroom Canvas">
+          <!-- Top Floating Aspect Ratio & Rotation Toolbar -->
+          <div class="h-10 border-b border-neutral-800/80 px-4 flex items-center justify-between text-xs font-mono bg-neutral-950/80 shrink-0 z-10">
+            <!-- Aspect Ratio Selector -->
+            <div class="flex items-center gap-1 overflow-x-auto py-1">
+              <span class="text-[10px] text-neutral-500 uppercase mr-1">Ratio:</span>
+              @for (r of aspectRatios; track r.id) {
+                <button
+                  type="button"
+                  (click)="setAspectRatio(r.value, r.id)"
+                  [class.bg-emerald-500]="selectedAspectId() === r.id"
+                  [class.text-neutral-950]="selectedAspectId() === r.id"
+                  [class.font-bold]="selectedAspectId() === r.id"
+                  [class.text-neutral-400]="selectedAspectId() !== r.id"
+                  class="px-2 py-0.5 rounded text-[11px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
+                >
+                  {{ r.label }}
+                </button>
+              }
+            </div>
+
+            <!-- Rotation & Flip Controls -->
+            <div class="flex items-center gap-1.5 shrink-0 pl-2 border-l border-neutral-800">
+              <button
+                type="button"
+                (click)="rotateCounterClockwise()"
+                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs flex items-center gap-1"
+                title="Rotate 90° Counter-Clockwise"
+              >
+                <span>↺</span> -90°
+              </button>
+              <button
+                type="button"
+                (click)="rotateClockwise()"
+                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs flex items-center gap-1"
+                title="Rotate 90° Clockwise"
+              >
+                <span>↻</span> +90°
+              </button>
+              <button
+                type="button"
+                (click)="toggleFlipH()"
+                [class.border-emerald-400]="isFlippedH()"
+                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs"
+                title="Flip Horizontal"
+              >
+                ⇄ Flip
+              </button>
+            </div>
+          </div>
+
           @if (selectedPhoto(); as photo) {
-            <div class="flex-1 flex items-center justify-center p-6 relative">
-              <div class="max-w-4xl max-h-full aspect-[3/2] w-full rounded-2xl overflow-hidden glass-card shadow-2xl relative">
+            <div class="flex-1 flex items-center justify-center p-6 relative overflow-auto">
+              <div
+                class="rounded-2xl overflow-hidden glass-card shadow-2xl relative transition-all duration-300 flex items-center justify-center"
+                [style.aspectRatio]="activeAspectRatio()"
+                style="max-width: min(85vw, 920px); max-height: calc(100vh - 12rem); width: 100%; height: auto;"
+              >
                 <app-photo-canvas
                   [photo]="photo"
                   [interactive]="true"
+                  [recipe]="photo.grade"
+                  [rotation]="photoRotation()"
+                  [flipH]="isFlippedH()"
                   class="w-full h-full block"
                 ></app-photo-canvas>
 
                 @if (photo.flags.retouched) {
-                  <div class="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md border border-emerald-400/40 px-2.5 py-1 rounded text-xs font-mono text-emerald-400">
+                  <div class="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md border border-emerald-400/40 px-2.5 py-1 rounded text-xs font-mono text-emerald-400 z-10">
                     Retouched
                   </div>
                 }
@@ -233,6 +290,51 @@ type InspectorTab = 'info' | 'retouch' | 'grade' | 'publish';
                       [(ngModel)]="photo.rights.copyright"
                       class="admin-input"
                     />
+                  </div>
+
+                  <div class="pt-2 border-t border-neutral-800">
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1.5">Canvas Aspect Ratio / Crop</label>
+                    <div class="grid grid-cols-4 gap-1">
+                      @for (r of aspectRatios; track r.id) {
+                        <button
+                          type="button"
+                          (click)="setAspectRatio(r.value, r.id)"
+                          [class.border-emerald-400]="selectedAspectId() === r.id"
+                          [class.text-emerald-400]="selectedAspectId() === r.id"
+                          class="p-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-center"
+                        >
+                          {{ r.label }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="pt-2 border-t border-neutral-800">
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1.5">Photo Rotation</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                      <button
+                        type="button"
+                        (click)="rotateCounterClockwise()"
+                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
+                      >
+                        ↺ -90°
+                      </button>
+                      <button
+                        type="button"
+                        (click)="rotateClockwise()"
+                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
+                      >
+                        ↻ +90°
+                      </button>
+                      <button
+                        type="button"
+                        (click)="toggleFlipH()"
+                        [class.border-emerald-400]="isFlippedH()"
+                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
+                      >
+                        ⇄ Flip
+                      </button>
+                    </div>
                   </div>
                 </div>
               }
@@ -543,6 +645,77 @@ export class AdminShellComponent implements OnInit {
   readonly showShortcuts = signal(false);
   readonly showPublishWizard = signal(false);
 
+  readonly aspectRatios = [
+    { id: 'orig', label: 'Original', value: 0 },
+    { id: '1:1', label: '1:1 Square', value: 1.0 },
+    { id: '4:5', label: '4:5 Portrait', value: 0.8 },
+    { id: '2:3', label: '2:3 Portrait', value: 2 / 3 },
+    { id: '3:2', label: '3:2 Classic', value: 1.5 },
+    { id: '16:9', label: '16:9 Wide', value: 16 / 9 },
+    { id: '9:16', label: '9:16 Story', value: 9 / 16 },
+    { id: '4:3', label: '4:3 Digital', value: 4 / 3 },
+  ];
+  readonly selectedAspectId = signal<string>('orig');
+  readonly customAspect = signal<number | null>(null);
+  readonly photoRotation = signal<number>(0);
+  readonly isFlippedH = signal<boolean>(false);
+
+  readonly activeAspectRatio = computed<number>(() => {
+    if (this.customAspect() !== null && this.customAspect()! > 0) {
+      return this.customAspect()!;
+    }
+    const p = this.selectedPhoto();
+    if (!p) return 1.5;
+    const isRotatedSideways = (this.photoRotation() % 180 !== 0);
+    const baseAspect = p.aspect || (p.width && p.height ? p.width / p.height : 1.5);
+    return isRotatedSideways ? 1 / baseAspect : baseAspect;
+  });
+
+  setAspectRatio(val: number, id?: string): void {
+    if (id) this.selectedAspectId.set(id);
+    if (val === 0) {
+      this.customAspect.set(null);
+      this.selectedAspectId.set('orig');
+    } else {
+      this.customAspect.set(val);
+    }
+    const p = this.selectedPhoto();
+    if (p) {
+      p.aspect = this.activeAspectRatio();
+      this.syncStagedPhoto(p);
+    }
+  }
+
+  rotateClockwise(): void {
+    this.photoRotation.update((r) => (r + 90) % 360);
+    const p = this.selectedPhoto();
+    if (p) {
+      p.aspect = this.activeAspectRatio();
+      this.syncStagedPhoto(p);
+    }
+  }
+
+  rotateCounterClockwise(): void {
+    this.photoRotation.update((r) => (r + 270) % 360);
+    const p = this.selectedPhoto();
+    if (p) {
+      p.aspect = this.activeAspectRatio();
+      this.syncStagedPhoto(p);
+    }
+  }
+
+  toggleFlipH(): void {
+    this.isFlippedH.update((f) => !f);
+  }
+
+  selectPhoto(photo: PhotoItem): void {
+    this.selectedPhoto.set(photo);
+    this.selectedAspectId.set('orig');
+    this.customAspect.set(null);
+    this.photoRotation.set(0);
+    this.isFlippedH.set(false);
+  }
+
   async ngOnInit(): Promise<void> {
     // Check if recovery draft exists
     const recovered = await this.draftStorage.loadDraft();
@@ -567,10 +740,6 @@ export class AdminShellComponent implements OnInit {
       event.preventDefault();
       this.saveDraft();
     }
-  }
-
-  selectPhoto(photo: PhotoItem): void {
-    this.selectedPhoto.set(photo);
   }
 
   async onFilesDropped(event: Event): Promise<void> {
