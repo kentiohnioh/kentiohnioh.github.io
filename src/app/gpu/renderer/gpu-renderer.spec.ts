@@ -49,3 +49,4 @@ describe('GpuRendererService', () => {
     expect(mock2dCtx.drawImage).toHaveBeenCalled();
   });
 });
+

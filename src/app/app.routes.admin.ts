@@ -43,6 +43,14 @@ export const routes: Routes = [
     title: 'Admin Studio — Theng Nioh',
   },
   {
+    path: 'admin/mask-lab',
+    loadComponent: () =>
+      import('./features/admin/mask-lab/mask-lab.component').then(
+        (m) => m.MaskLabComponent
+      ),
+    title: 'Mask Lab QA — Theng Nioh',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.component').then(

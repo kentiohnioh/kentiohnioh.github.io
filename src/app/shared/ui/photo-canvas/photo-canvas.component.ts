@@ -191,3 +191,4 @@ export class PhotoCanvasComponent implements OnInit, OnDestroy {
     }
   }
 }
+

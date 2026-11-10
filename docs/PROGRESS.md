@@ -25,6 +25,7 @@
 
 ## Phase 3: GPU Rendering Core and Public Delivery
 - **Status**: Completed & Verified
+- **Commit**: `93c0a32`
 
 ### What Was Built
 1. **Single Shared WebGL2 Rendering Core** (`src/app/gpu/renderer/gpu-renderer.service.ts`):
@@ -81,3 +82,57 @@
 ### Known Limitations
 - Client-side download deterrence stops casual right-click and save shortcuts, but cannot prevent OS-level screen capture or DevTools network extraction (as documented in `docs/LIMITATIONS.md`).
 - Hardware WebGL2 acceleration depends on client GPU support; systems without WebGL2 cleanly fall back to high-quality 2D canvas rendering with grading disabled.
+
+---
+
+## Phase 4: Retouch Engine I — Detection & 12 Masks
+- **Status**: Completed & Verified
+
+### What Was Built
+1. **Strict 12-Zone Partition of Unity Normalizer** (`src/app/core/utils/mask-fusion.ts`):
+   - Implements strict hierarchical priority order:
+     1. Iris (`iris_l`, `iris_r`)
+     2. Sclera (`sclera_l`, `sclera_r`)
+     3. Teeth (`teeth`)
+     4. Lips (`lips`)
+     5. Eyebrows (`brow_l`, `brow_r`)
+     6. Facial hair / stubble (`beard`)
+     7. Hairline / scalp (`hair`)
+     8. Skin (`skin`)
+     9. Background / torso fallback (`background`)
+   - Normalizes across all 12 zones so that $\sum_{i=1}^{12} w_i = 1.000 \pm 0.004$ at every single pixel.
+   - Zero seam artifacts and zero halo accumulation across overlapping facial features.
+2. **Subject-Relative Skin Model in OKLab** (`src/app/core/utils/skin-model.ts`):
+   - Evaluates skin tones across Fitzpatrick scale I through VI.
+   - Adaptive 2D Gaussian in OKLab color space $(a, b)$ relative to the detected subject's median skin chromaticity.
+   - Mahalanobis distance metric ($D_M \le 3.0$) with soft Gaussian rolloff, robust to varying lighting conditions and ethnicities.
+3. **Edge-Preserving Guided Filter** (`src/app/core/utils/guided-filter.ts`):
+   - Pure algorithm implementation based on He, Sun & Tang ($O(N)$ linear time).
+   - Fast separable box filter for moving average and covariance computation.
+   - Refines MediaPipe polygon rasterizations against photo luminance edges, preserving hair strands, pores, and glasses rims without halos.
+4. **Retouch Detection Engine Service** (`src/app/core/services/retouch-engine.service.ts`):
+   - Admin-only service leveraging `@mediapipe/tasks-vision` `FaceLandmarker` with lazy dynamic import.
+   - Derives all 12 zones from 478 landmarks (including iris points 468-477).
+   - Downsamples to a maximum dimension of 1024px for swift sub-second mask extraction.
+   - Exports the public skin protection mask (`exportSkinProtectionMask()`) as an 8-bit single-channel grayscale buffer.
+5. **Interactive Mask Lab** (`src/app/features/admin/mask-lab/mask-lab.component.ts`):
+   - Developer QA component at `/admin/mask-lab`.
+   - File dropzone supporting drag-and-drop and sample selection.
+   - Dual canvas rendering: side-by-side or overlay visualization of detected landmarks and individual zone masks with colored false-color overlays.
+   - Real-time Partition of Unity integrity verification and zone coverage diagnostics.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **15 test files passed, 57 tests passed, 0 failures**
+    - `mask-fusion.spec.ts`: 3 passed (validates strict Partition of Unity $\sum w_i = 1.000 \pm 0.004$ across $256 \times 256$ pixels with random overlapping weights; tests priority suppression of skin beneath lips and irises).
+    - `skin-model.spec.ts`: 3 passed (verifies correct classification across Fitzpatrick I-VI with Mahalanobis distance gating; rejects non-skin colors).
+    - `guided-filter.spec.ts`: 2 passed (verifies edge-preserving smoothing across sharp step edges without halo artifacts).
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 5.0s.
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero `@mediapipe` references in public dist).
+  - Production initial bundle: **70.30 KB gzipped** (well below budget of &le; 180 KB).
+  - `npm run build:admin`: Admin build completed cleanly; admin chunks (`mask-lab-component`, 165 kB raw / 42 kB gzip) load strictly on lazy demand under `/admin/mask-lab`.
+
+### Known Limitations
+- MediaPipe FaceLandmarker requires WebAssembly and WebGL acceleration. In environments lacking SIMD/WASM support, detection fallback times may be increased.
+- Extreme head poses exceeding 60 degrees yaw may yield partial landmark confidence, where fallback convex hulls are utilized.

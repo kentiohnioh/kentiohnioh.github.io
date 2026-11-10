@@ -54,3 +54,4 @@ describe('AmbientGlowService', () => {
     expect(g3).toMatch(/^rgba\(\d+,\s*\d+,\s*\d+,\s*0\.05\)$/);
   });
 });
+

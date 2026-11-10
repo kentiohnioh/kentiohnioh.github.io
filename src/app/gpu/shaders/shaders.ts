@@ -54,3 +54,4 @@ void main() {
   fragColor = vec4(color.rgb, color.a * u_opacity);
 }
 `;
+
