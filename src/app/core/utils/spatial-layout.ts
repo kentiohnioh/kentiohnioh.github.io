@@ -277,3 +277,4 @@ export function calculateFitAllCamera(
 
   return { cameraX, cameraY, zoom };
 }
+

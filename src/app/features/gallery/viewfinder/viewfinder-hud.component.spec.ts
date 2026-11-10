@@ -77,3 +77,4 @@ describe('ViewfinderHudComponent', () => {
     expect(component.hasActiveFilters()).toBe(false);
   });
 });
+

@@ -330,3 +330,4 @@ export function computeFacetCounts(
 
   return { focal, aperture, shutter, iso, mood };
 }
+

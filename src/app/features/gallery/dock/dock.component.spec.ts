@@ -61,3 +61,4 @@ describe('DockComponent', () => {
     expect(component.activeFilterCount()).toBe(2);
   });
 });
+

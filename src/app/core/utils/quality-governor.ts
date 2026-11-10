@@ -111,3 +111,4 @@ export class QualityGovernor {
     this.consecutiveFastFrames = 0;
   }
 }
+

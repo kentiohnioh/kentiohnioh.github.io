@@ -429,3 +429,4 @@ export class SpatialCanvasComponent implements OnInit, OnDestroy {
     this.animFrameId = requestAnimationFrame(loop);
   }
 }
+

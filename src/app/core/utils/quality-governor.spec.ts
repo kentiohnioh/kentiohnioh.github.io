@@ -71,3 +71,4 @@ describe('QualityGovernor', () => {
     expect(gov.getLevel()).toBe('minimal');
   });
 });
+

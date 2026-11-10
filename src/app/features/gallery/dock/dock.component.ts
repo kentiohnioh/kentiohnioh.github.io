@@ -101,18 +101,18 @@ import { CatalogStateService, GalleryMode } from '../../../core/services/catalog
           }
         </button>
 
-        <!-- Vibe Search Toggle / Input -->
-        <div class="relative flex items-center">
-          <input
-            #searchInput
-            type="text"
-            [value]="catalogState.activeFilters().searchQuery || ''"
-            (input)="onSearchInput($event)"
-            placeholder="Search mood or lens..."
-            aria-label="Search photographs by atmosphere or lens"
-            class="w-32 sm:w-44 px-2.5 py-1.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-mono text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:w-48 transition-all"
-          />
-        </div>
+        <!-- Vibe Search Toggle Button -->
+        <button
+          type="button"
+          (click)="openVibeSearch.emit()"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-800 bg-neutral-900/80 text-xs font-mono text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+          aria-label="Open AI Vibe and Semantic Search modal"
+        >
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <span class="hidden sm:inline">Vibe Search</span>
+        </button>
 
         <!-- About Link -->
         <a
@@ -164,6 +164,7 @@ import { CatalogStateService, GalleryMode } from '../../../core/services/catalog
 export class DockComponent {
   readonly catalogState = inject(CatalogStateService);
   @Output() toggleViewfinder = new EventEmitter<void>();
+  @Output() openVibeSearch = new EventEmitter<void>();
 
   readonly isAutoHidden = signal(false);
   readonly isFocused = signal(false);

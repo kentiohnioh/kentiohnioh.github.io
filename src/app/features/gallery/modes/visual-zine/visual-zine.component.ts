@@ -301,3 +301,4 @@ export class VisualZineComponent implements OnInit {
     }
   }
 }
+

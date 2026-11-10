@@ -9,6 +9,7 @@ import { KineticGridComponent } from './modes/kinetic-grid/kinetic-grid.componen
 import { SpatialCanvasComponent } from './modes/spatial-canvas/spatial-canvas.component';
 import { ContactSheetComponent } from './modes/contact-sheet/contact-sheet.component';
 import { VisualZineComponent } from './modes/visual-zine/visual-zine.component';
+import { VibeSearchComponent } from './vibe-search/vibe-search.component';
 
 @Component({
   selector: 'app-gallery-shell',
@@ -21,6 +22,7 @@ import { VisualZineComponent } from './modes/visual-zine/visual-zine.component';
     SpatialCanvasComponent,
     ContactSheetComponent,
     VisualZineComponent,
+    VibeSearchComponent,
   ],
   template: `
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 relative" aria-label="Visual Discovery Gallery">
@@ -124,7 +126,13 @@ import { VisualZineComponent } from './modes/visual-zine/visual-zine.component';
       <!-- Fixed Floating Glass Dock -->
       <app-gallery-dock
         (toggleViewfinder)="toggleViewfinder()"
+        (openVibeSearch)="vibeSearchOpen.set(true)"
       ></app-gallery-dock>
+
+      <!-- Vibe Search Dialog -->
+      @if (vibeSearchOpen()) {
+        <app-vibe-search (close)="vibeSearchOpen.set(false)"></app-vibe-search>
+      }
     </main>
   `,
   styles: [`
@@ -139,6 +147,7 @@ export class GalleryShellComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly viewfinderOpen = signal<boolean>(false);
+  readonly vibeSearchOpen = signal<boolean>(false);
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {

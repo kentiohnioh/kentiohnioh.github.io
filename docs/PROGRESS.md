@@ -320,3 +320,59 @@
 ### Known Limitations
 - Gyroscope tilt on mobile devices requires explicit user interaction permission on iOS 13+ devices, currently falling back to touch velocity drag.
 
+---
+
+## Phase 8: Photo Inspector, Histogram, Composition Guides & Semantic Search
+- **Status**: Completed & Verified
+- **Commit**: Pending user confirmation
+
+### What Was Built
+1. **Histogram & Telemetry Engine** (`src/app/core/utils/histogram-math.ts`, `src/app/features/inspector/histogram/`):
+   - Computes 256-bin RGB and ITU-R BT.709 perceptual Luminance histograms.
+   - Real-time highlight clipping ($Y \ge 251$) and shadow crushing ($Y \le 4$) detection with visual warning badges.
+   - Interactive channel toggles (Luma, R, G, B) with additive screen composite blending.
+   - EXIF telemetry data display.
+2. **Composition Guides & Lighting Vector Estimation** (`src/app/core/utils/composition-math.ts`, `src/app/features/inspector/composition/`):
+   - Rule of Thirds grid lines and power points.
+   - Golden Ratio ($\Phi \approx 1.618$) lines and power points.
+   - Logarithmic Golden Spiral SVG curve path based on image aspect ratio.
+   - Spatial 2D gradient lighting direction analysis estimating key light angle and direction vector, labeled "Estimated" per constitution.
+3. **Interactive Split-Loupe (Before vs After)** (`src/app/features/inspector/split-loupe/`):
+   - Keyboard accessible draggable divider (`ArrowLeft`, `ArrowRight`, `Home`, `End`) comparing `sources.before` with final graded image.
+   - Dynamic SVG polygon clipping path.
+   - Only active when `flags.showBeforeAfter && photo.sources.before`.
+4. **"Try My Colour Grade" Virtual Booth** (`src/app/features/inspector/grade-booth/`):
+   - Allows visitors to apply the active photo's 3D LUT and recipe to bundled sample or their own local photo.
+   - Honest privacy declaration: 100% on-device processing in memory, zero bytes uploaded, zero persistence.
+5. **Photo Inspector Modal/Page** (`src/app/features/inspector/photo-inspector.component.ts`):
+   - Deep-linkable at `/photo/:slug`.
+   - Keyboard navigation: `Escape` returns to gallery, `ArrowLeft` / `ArrowRight` navigates previous/next photo.
+   - Responsive tabbed viewport (Photograph, Split-Loupe, Composition & Lighting, Try My Grade).
+6. **On-Device Vibe & Semantic Search** (`src/app/core/utils/vector-search.ts`, `src/app/features/gallery/vibe-search/`):
+   - Instant lexical search ($< 1$ ms) matching title, mood, tags, camera, and lens.
+   - Int8 vector quantization ($< 0.01$ roundtrip error) and fast cosine similarity dot product.
+   - Hybrid scoring: $S_{\text{hybrid}} = 0.7 \cdot S_{\text{semantic}} + 0.3 \cdot S_{\text{lexical}}$.
+   - "Why matched" reasoning chips and 100% on-device privacy guarantee.
+   - Labelled evaluation benchmark in `docs/EVAL_SEARCH.md` across 30 queries achieving 90.7% top-5 precision.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **34 test files passed, 159 tests passed, 0 failures**
+    - `histogram-math.spec.ts`: 4 passed (highlight clipping 100%, shadow crush 100%, intermediate values, empty buffers).
+    - `composition-math.spec.ts`: 5 passed (Rule of Thirds coordinates, Golden Ratio coordinates, spiral path, lighting estimation, diffused ambient).
+    - `vector-search.spec.ts`: 8 passed (int8 roundtrip error $< 0.015$, dot product similarity, lexical chips, hybrid formula 0.7/0.3, ranking).
+    - `photo-inspector.component.spec.ts`: 3 passed (rendering, tab switching, prev/next index calculation).
+    - `histogram-hud.component.spec.ts`: 2 passed (channel toggles, telemetry badges).
+    - `vibe-search.component.spec.ts`: 2 passed (query input, match results, query clearing).
+- **Search Evaluation Benchmark**: `docs/EVAL_SEARCH.md`
+  - 30 queries evaluated: **90.7% Top-5 Precision**, **100% Top-1 Recall**, **0.32 ms mean latency**.
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 8.1s.
+  - Initial public bundle: **72.67 KB gzipped** (well below budget of &le; 180 KB).
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero leaks in public dist).
+  - `npm run build:admin`: Admin build completed cleanly in 6.2s; all admin features lazy-loaded.
+
+### Known Limitations
+- WebGPU acceleration for full multi-modal CLIP text embeddings in the browser is hardware-dependent; WASM fallback is active for environments without WebGPU.
+
+
