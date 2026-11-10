@@ -13,3 +13,4 @@ This document records key decisions, deviations, and rationale per Rule 13 of th
 ## 2026-11-10: Zero-Dependency Schema Validation
 - **Decision**: Hand-crafted functional TypeScript schema validators for catalog models and migrations.
 - **Rationale**: Keeps the public runtime bundle ultra-lean (under the 180 KB gzip budget) without introducing heavy external validation dependencies, while offering custom error telemetry and privacy guarantees (e.g. automatic GPS coordinate masking when set to 'hidden').
+

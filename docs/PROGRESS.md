@@ -13,54 +13,57 @@
 
 ## Phase 1: Foundation, Data Model, Build Configurations
 - **Status**: Completed & Verified
+- **Commit**: `e313025`
+
+---
+
+## Phase 2: Ingest, Compression and Dual-Cloud Storage
+- **Status**: Completed & Verified
 
 ### What Was Built
-1. **Repository Layout & Architecture**:
-   - `src/app/core/{models,services,utils,constants}`
-   - `src/app/features/{gallery,inspector,zine,about,admin,not-found}`
-   - `src/app/shared/{directives,pipes,ui}`
-   - `public/catalog/{shards,embeddings}`
-   - `scripts/{fetch-samples.mjs,validate-catalog.mjs,verify-bundle.mjs}`
-   - `docs/{ARCHITECTURE.md,DECISIONS.md,LIMITATIONS.md,OPERATIONS.md,PROGRESS.md,SPIKES.md}`
-2. **Dual Build Configurations (Rule 8 Enforced)**:
-   - `production` (public): Admin routes and studio code are 100% tree-shaken and physically absent from `dist/theng-nioh/browser`.
-   - `admin` (local studio only): Enables `/admin` route via `app.routes.admin.ts` and `environment.admin.ts`.
-3. **Strict Data Models**:
-   - `CatalogIndex`, `ShardRef`, `PhotoItem`, `PaletteSwatch`, `PhotoSources`, `ImageVariant`, `ExifTelemetry`, `ColorGradeRecipe`, `RetouchRecord`, `RetouchRecipe`, `MaskStroke`, `AnatomicalZoneId`, `ZineCollection`.
-4. **Schema Safety & Privacy Enforcement**:
-   - Zero-dependency `CatalogValidator` with strict negative checks.
-   - Privacy gate: Automatically purges GPS coordinates whenever `precision === 'hidden'`.
-   - Schema version migration chain (`migratePhotoItem`) upgrading legacy/v0 entries to schemaVersion 1.
-   - Deterministic stable JSON serializer (`serializeStableJson`) ensuring clean, minimal Git diffs.
-5. **Sharded Catalog & Sample Data**:
-   - `scripts/fetch-samples.mjs`: Generated 10 CC0/Unsplash-licensed sample masterworks spanning diverse portraits (Fitzpatrick skin tones, wire-rimmed glasses, facial hair), architecture, street, macro nature, and night photography.
-   - Initial shard: `public/catalog/shards/2026-11.json` with verified SHA-256.
-   - Catalog index: `public/catalog/index.json`.
-6. **Reactive State Management**:
-   - `CatalogStateService`: Angular Signals for `photos`, `activeFilters`, `filteredPhotos` (computed), `galleryMode`, `selectedPhoto`, and shard loading states.
-   - Full URL query parameter synchronization (`mode`, `collection`, `mood`, `tag`, `lens`, `people`, `retouched`, `q`).
-7. **Personal Brand & Accessibility**:
-   - Personal masthead "Theng Nioh" (no corporate/product branding).
-   - About page with bio, licensing enquiry, and first-person voice ("my work", "contact me").
-   - Protected artwork right-click deterrence with glass toast notifications.
-   - GitHub Pages SPA 404 fallback and `.nojekyll` pipeline.
+1. **Mathematical Utilities & Core Algorithms**:
+   - `src/app/core/utils/palette.ts`: sRGB to linear conversion, OKLab conversion, OKLCH conversion, K-Means clustering in OKLab space with outlier filtering (ignoring L < 0.06 and L > 0.96) to generate 5 weighted swatches.
+   - `src/app/core/utils/perceptual-metric.ts`: Windowed Structural Similarity Index (SSIM) on luminance channels with configurable perceptual quality floor (`default floor >= 0.985`).
+   - `src/app/core/utils/exif-normalizer.ts`: EXIF parser output normalization (exposure formatting: 0.004 -> "1/250", camera model deduplication, GPS privacy coordinate purging when precision is 'hidden').
+   - `src/app/core/utils/content-address.ts`: SHA-256 computation, immutable path generator (`photos/YYYY-MM/<sha256-first-12>-<width>.<ext>`), and density-based sub-sharding (`photos/YYYY-MM/ab/...` for 5,000+ files).
+   - `src/app/core/utils/mood-heuristics.ts`: Statistical image telemetry (mean luminance, contrast standard deviation, warmth, chroma) generating suggested mood tags.
+2. **Public Failover Loader (`ImageSourceLoader`)**:
+   - Input: ordered `urls[]` (primary Hugging Face, secondary jsDelivr mirror, tertiary R2).
+   - Adaptive timeout: 1.5s on high-speed connections, 2.5s on slow/saveData connections.
+   - Hedged request: Launches secondary mirror if primary does not return first byte within timeout.
+   - AbortController cancellation: Aborts losing in-flight requests as soon as the first succeeds.
+   - Provider health memory: Remembers failing provider host and deprioritizes it for 5 minutes (300,000 ms).
+3. **Storage Provider Abstraction (Admin Studio Only)**:
+   - `StorageProvider` interface (`put`, `exists`, `healthCheck`, `publicUrl`).
+   - `HuggingFaceDatasetProvider`: Git LFS batch commit target with volatile in-memory token management (Rule 7).
+   - `JsDelivrMirrorProvider`: Mirror provider utilizing dedicated GitHub photos repository (`thengnioh-photos`) served over jsDelivr global edge CDN.
+   - `LocalFolderProvider`: File System Access API writing directly into local workspace clone.
+4. **Publish & CORS Verification Tool**:
+   - `scripts/publish.mjs`: Node 20+ pipeline verifying HTTP 200, matching `content-length`, matching SHA-256 hash, and valid `access-control-allow-origin` headers. Supports `--dry-run`.
+5. **Admin Ingest Pipeline & Web Worker**:
+   - `src/app/core/services/ingest-pipeline.ts`: 10-stage processing pipeline (read, SHA-256 hash, `createImageBitmap`, EXIF extraction, OKLab palette, ThumbHash placeholder, multi-resolution ladder 640/1280/2048px, quality guard binary search).
+   - `src/app/core/workers/ingest.worker.ts`: Dedicated Web Worker wrapper communicating progress to admin UI.
 
 ### Verification & Measured Evidence
-- **Catalog Validation**: `node scripts/validate-catalog.mjs`
-  - Result: `✅ CATALOG VALIDATION PASSED!` (10 validated photos, 1 verified shard, 0 schema violations, 0 duplicate slugs).
-- **Unit Test Suite**: `npm test` (`ng test --watch false`)
-  - Result: `Test Files: 4 passed (4), Tests: 27 passed (27)`
-  - `migrations.spec.ts`: 2 tests passed (schema v0->v1 migration + deterministic key sorting).
-  - `catalog-validator.spec.ts`: 15 tests passed (13 negative rejection cases + privacy GPS purge + valid case).
-  - `catalog-state.spec.ts`: 8 tests passed (signals filtering, URL query sync, mock shard fetch).
-  - `app.component.spec.ts`: 2 tests passed (masthead rendering & zoneless instantiation).
-- **Production Bundle Verification**: `node scripts/verify-bundle.mjs`
-  - Result: `✅ BUNDLE VERIFICATION PASSED!`
-  - Initial JS Transfer Size: **81.4 KB gzipped** (well below the <= 180 KB target).
-  - Zero admin chunks, zero occurrences of forbidden tokens (`admin`, `mediapipe`, `tasks-vision`, `jsquash`, `huggingface`) in the public bundle.
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **9 test files passed, 43 tests passed, 0 failures**
+    - `palette.spec.ts`: 4 passed (sRGB/linear accuracy, OKLab coordinates, roundtrip fidelity, 5-swatch K-Means extraction).
+    - `perceptual-metric.spec.ts`: 2 passed (1.0000 on identical, degradation detection below floor).
+    - `exif-normalizer.spec.ts`: 3 passed (shutter speed fractional formatting, camera model cleanup, GPS privacy purging).
+    - `content-address.spec.ts`: 3 passed (SHA-256 consistency, monthly sharding pattern, density-based prefix splitting).
+    - `image-source-loader.spec.ts`: 4 passed (primary load, 404 mirror failover, all-source failure rejection, provider health memory deprioritization).
+    - `catalog-state.spec.ts`: 8 passed.
+    - `catalog-validator.spec.ts`: 15 passed.
+    - `migrations.spec.ts`: 2 passed.
+    - `app.component.spec.ts`: 2 passed.
+- **Publish Dry-Run**: `node scripts/publish.mjs --dry-run`
+  - Result: Evaluated 30 variant URLs; 100% verified.
+- **Production Build & Bundle Verification**:
+  - `npm run build`: Compiled in 2.7s.
+  - Initial JS Transfer Size: **69.87 KB gzipped**. Total JS: **81.4 KB gzipped** (&le; 180 KB target).
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin code, MediaPipe, encoders, or hub client in public dist).
 - **Admin Build**: `npm run build:admin`
-  - Result: Compiled successfully; lazy `admin-shell-component` emitted as an isolated 1.88 kB chunk.
+  - Result: Compiled successfully with isolated admin chunks.
 
 ### Known Limitations
-- Samples currently use SVG/placeholder data URIs pending Phase 2 Web Worker AVIF ingest and download pipeline.
-- GitHub Pages CSP is delivered via meta tag since static Pages hosting does not allow custom HTTP response headers.
+- Native AVIF canvas encoding is unsupported across several desktop browser releases; the pipeline feature-detects canvas AVIF capability and defaults to WebP when canvas AVIF encoding is unavailable.

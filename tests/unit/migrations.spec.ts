@@ -76,3 +76,4 @@ describe('Migrations and Serialization', () => {
     expect(serializedA.indexOf('middle')).toBeLessThan(serializedA.indexOf('zebra'));
   });
 });
+

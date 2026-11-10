@@ -233,3 +233,4 @@ export class CatalogValidator {
     return { success: true, data: input as ShardCatalog, errors: [] };
   }
 }
+

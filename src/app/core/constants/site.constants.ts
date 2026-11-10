@@ -10,3 +10,4 @@ export const AUTHOR_NAME = 'Theng Nioh';
 export const AUTHOR_ROLE = 'Photographer';
 export const CONTACT_EMAIL = 'contact@thengnioh.com';
 export const COPYRIGHT_NOTICE = '© Theng Nioh. All rights reserved.';
+

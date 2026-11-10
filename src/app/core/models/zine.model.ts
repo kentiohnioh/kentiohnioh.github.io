@@ -27,3 +27,4 @@ export interface ZineCollection {
   publishedDate: string;
   pages: ZinePage[];
 }
+

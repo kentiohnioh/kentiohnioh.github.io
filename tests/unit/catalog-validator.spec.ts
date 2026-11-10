@@ -222,3 +222,4 @@ describe('CatalogValidator', () => {
     expect(res.data?.exif.gps).toBeUndefined();
   });
 });
+

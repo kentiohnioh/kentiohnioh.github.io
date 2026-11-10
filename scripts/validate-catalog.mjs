@@ -173,3 +173,4 @@ if (errors.length > 0) {
   console.log(`  - Zero schema violations, zero duplicate slugs.`);
   process.exit(0);
 }
+

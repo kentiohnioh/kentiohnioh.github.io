@@ -81,3 +81,4 @@ export interface RetouchRecord {
     hasExtreme: boolean;
   };
 }
+

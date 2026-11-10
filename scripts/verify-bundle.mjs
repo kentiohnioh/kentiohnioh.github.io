@@ -87,3 +87,4 @@ if (violations.length > 0) {
   console.log('  - MediaPipe, tasks-vision, jsquash, and huggingface are 100% physically absent from public dist.');
   process.exit(0);
 }
+

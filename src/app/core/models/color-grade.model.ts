@@ -58,3 +58,4 @@ export interface ColorGradeRecipe {
     mode?: 'mask' | 'heuristic';
   };
 }
+

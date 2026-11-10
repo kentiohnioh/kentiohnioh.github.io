@@ -65,3 +65,4 @@ export class AboutComponent {
   readonly contactEmail = CONTACT_EMAIL;
   readonly copyrightNotice = COPYRIGHT_NOTICE;
 }
+

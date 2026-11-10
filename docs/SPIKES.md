@@ -6,3 +6,4 @@ Records small spikes and API verifications per Rule 1.
 - **Verification**: Verified `@angular/core` exports `provideZonelessChangeDetection`.
 - **Command**: `ng new ... --zoneless` generated `app.config.ts` with `provideZonelessChangeDetection()`.
 - **Result**: Success. Zoneless is now active across all components.
+

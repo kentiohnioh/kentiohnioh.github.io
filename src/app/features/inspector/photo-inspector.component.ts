@@ -163,3 +163,4 @@ export class PhotoInspectorComponent implements OnInit {
     return v?.urls[0] || photo.placeholder;
   }
 }
+

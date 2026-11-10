@@ -51,3 +51,4 @@ export const routes: Routes = [
     title: 'Photograph Not Found — Theng Nioh',
   },
 ];
+
