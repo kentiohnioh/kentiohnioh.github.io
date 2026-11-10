@@ -2,18 +2,18 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute, Params } from '@angular/router';
 import { CatalogIndex, PhotoItem, ShardCatalog } from '../models/catalog.model';
 import { CatalogValidator } from './catalog-validator.service';
+import {
+  ViewfinderFilters,
+  matchesViewfinderFilters,
+  computeFacetCounts,
+} from '../utils/viewfinder-filter';
 
 export type GalleryMode = 'spatial' | 'sway' | 'contact' | 'zine';
 
-export interface FilterCriteria {
-  collectionId?: string | null;
-  mood?: string | null;
-  tag?: string | null;
+export interface FilterCriteria extends ViewfinderFilters {
+  // Legacy aliases for backwards compatibility
   focalBucket?: string | null;
   apertureBucket?: string | null;
-  hasPeople?: boolean | null;
-  retouchedOnly?: boolean | null;
-  searchQuery?: string | null;
 }
 
 @Injectable({
@@ -45,42 +45,23 @@ export class CatalogStateService {
     const f = this.activeFilters();
 
     return all.filter((photo) => {
-      if (f.collectionId && !photo.collectionIds.includes(f.collectionId)) {
-        return false;
-      }
-      if (f.mood && !photo.mood.includes(f.mood)) {
-        return false;
-      }
-      if (f.tag && !photo.tags.includes(f.tag)) {
-        return false;
-      }
-      if (f.hasPeople !== undefined && f.hasPeople !== null && photo.flags.hasPeople !== f.hasPeople) {
-        return false;
-      }
-      if (f.retouchedOnly && !photo.flags.retouched) {
-        return false;
-      }
+      // Legacy focalBucket compatibility check
       if (f.focalBucket) {
-        const fl = photo.exif.focalLengthMm;
+        const fl = photo.exif?.focalLengthMm;
         if (!fl) return false;
         if (f.focalBucket === 'ultra-wide' && fl >= 24) return false;
         if (f.focalBucket === 'wide' && (fl < 24 || fl > 35)) return false;
         if (f.focalBucket === 'standard' && (fl <= 35 || fl > 70)) return false;
         if (f.focalBucket === 'telephoto' && fl <= 70) return false;
       }
-      if (f.searchQuery) {
-        const q = f.searchQuery.trim().toLowerCase();
-        const matchesTitle = photo.title.toLowerCase().includes(q);
-        const matchesAlt = photo.alt.toLowerCase().includes(q);
-        const matchesTags = photo.tags.some((t) => t.toLowerCase().includes(q));
-        const matchesMood = photo.mood.some((m) => m.toLowerCase().includes(q));
-        const matchesCamera = photo.exif.camera?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesAlt && !matchesTags && !matchesMood && !matchesCamera) {
-          return false;
-        }
-      }
-      return true;
+
+      // Check standard viewfinder filters (stops, mood, swatch, search, flags)
+      return matchesViewfinderFilters(photo, f);
     });
+  });
+
+  readonly facetCounts = computed(() => {
+    return computeFacetCounts(this.photos(), this.activeFilters());
   });
 
   /**
@@ -183,7 +164,11 @@ export class CatalogStateService {
     const filters: FilterCriteria = {
       collectionId: params['collection'] || null,
       mood: params['mood'] || null,
-      tag: params['tag'] || null,
+      focalStop: params['focal'] || null,
+      apertureStop: params['aperture'] || null,
+      shutterStop: params['shutter'] || null,
+      isoStop: params['iso'] || null,
+      colorHex: params['color'] || null,
       focalBucket: params['lens'] || null,
       searchQuery: params['q'] || null,
       hasPeople: params['people'] !== undefined ? params['people'] === 'true' : null,
@@ -199,8 +184,12 @@ export class CatalogStateService {
     const queryParams: Record<string, string | null> = {
       mode: this.galleryMode() === 'sway' ? null : this.galleryMode(),
       collection: f.collectionId || null,
-      mood: f.mood || null,
-      tag: f.tag || null,
+      mood: f.mood && f.mood !== 'all' ? f.mood : null,
+      focal: f.focalStop && f.focalStop !== 'all' ? f.focalStop : null,
+      aperture: f.apertureStop && f.apertureStop !== 'all' ? f.apertureStop : null,
+      shutter: f.shutterStop && f.shutterStop !== 'all' ? f.shutterStop : null,
+      iso: f.isoStop && f.isoStop !== 'all' ? f.isoStop : null,
+      color: f.colorHex || null,
       lens: f.focalBucket || null,
       q: f.searchQuery || null,
       people: f.hasPeople !== null && f.hasPeople !== undefined ? String(f.hasPeople) : null,
@@ -220,4 +209,3 @@ export class CatalogStateService {
     });
   }
 }
-

@@ -415,3 +415,4 @@ export class ColorStudioComponent implements OnInit, OnDestroy {
     }
   }
 }
+

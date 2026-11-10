@@ -247,3 +247,76 @@
 
 ### Known Limitations
 - Halation diffusion pass in this phase is computed using the high-frequency luminance threshold and tint; full spatial multi-tap Gaussian bloom on public canvases will be dynamically governed by the Phase 10 performance quality governor when GPU frame times allow.
+
+---
+
+## Phase 7: Public Gallery (3 Fluid Modes & Viewfinder Dials)
+- **Status**: Completed & Verified
+- **Commit**: Pending user confirmation
+
+### What Was Built
+1. **Pure Mathematical Algorithms & Layout Engine**:
+   - `spatial-layout.ts`:
+     - Deterministic 32-bit Mulberry32 PRNG and string hash seeding.
+     - OKLCH hue family clustering (Warm, Natural, Cool, Twilight, Neutral) and collection clustering.
+     - Golden-ratio phyllotaxis spiral arrangement.
+     - Spatial frustum culling (`cullFrustum`) with configurable viewport margins.
+     - Level of Detail (`selectLOD`) algorithm selecting 640, 1280, or 2048px variants by on-screen pixel size.
+     - Virtual canvas bounding box and camera fit-all calculation (`calculateFitAllCamera`).
+   - `viewfinder-filter.ts`:
+     - Camera dial stops: Focal Length (`24mm`, `35mm`, `50mm`, `85mm`, `135mm+`), Aperture (`f/1.4`, `f/2.8`, `f/4.0`, `f/5.6`, `f/11+`), Shutter (`1/2000s`, `1/250s`, `1/30s`, `1s+`), ISO (`100`, `400`, `800`, `1600`, `6400+`), and Atmosphere Mood.
+     - OKLab Delta-E Euclidean color distance calculation and swatch matching (`matchesColorSwatch`).
+     - Dynamic facet distribution counting (`computeFacetCounts`) disabling 0-result stops.
+   - `quality-governor.ts`:
+     - Dynamic frame duration monitoring with 20ms threshold.
+     - Throttles visual effects (`full` -> `reduced` -> `minimal`) upon 30 consecutive slow frames; recovers upon 60 fast frames.
+     - Unconditional enforcement of `prefers-reduced-motion`.
+2. **Floating Glass Dock** (`src/app/features/gallery/dock/dock.component.ts`):
+   - Fixed bottom glassmorphic dock with 4 gallery modes: Sway (`1`), Spatial (`2`), Contact (`3`), Zine (`4`).
+   - Keyboard shortcuts (`1`, `2`, `3`, `4`, `v` for viewfinder).
+   - Viewfinder filter toggle with active badge counter.
+   - Live atmosphere/vibe search input.
+   - Auto-hide on downward scroll with keyboard focus recovery (`focusin` unhides dock).
+3. **Spatial 2D Infinite Canvas** (`src/app/features/gallery/modes/spatial-canvas/`):
+   - 2D pan and zoom with inertia physics, mouse wheel zoom towards cursor, keyboard controls (arrows, `+`/`-`, `0` reset, double-click to center).
+   - Frustum culling ensuring only visible tiles are active.
+   - Minimap HUD with real-time camera viewport indicator and click-to-recenter.
+   - Parallel accessible list of buttons mirroring canvas tiles for screen readers.
+4. **Kinetic Sway Grid** (`src/app/features/gallery/modes/kinetic-grid/`):
+   - Responsive editorial masonry grid with 3D perspective tilt (`perspective: 1000px`, `rotateX`, `rotateY`).
+   - Scroll and pointer velocity tracking with inertia smoothing.
+   - Quality governor integration automatically degrading tilt under CPU/GPU throttling.
+   - Zero raw `<img>` tags (WebGL2 canvas protected rendering).
+5. **Darkroom Contact Sheet** (`src/app/features/gallery/modes/contact-sheet/`):
+   - Proof sheet grid with frame counter stamps (`01A`, `02A`), roll information, and monospace EXIF tags.
+   - Optical magnifying loupe sampling a higher magnification LOD under pointer.
+   - Full keyboard navigation across rows and columns with `Enter` opening photo inspector.
+6. **Visual Zine (Story Mode)** (`src/app/features/gallery/modes/visual-zine/`):
+   - Horizontal editorial magazine layout with CSS scroll-snap.
+   - Location coordinates respecting GPS privacy flags (`precision !== 'hidden'`).
+   - Shooting notes, pull quotes, photographer statement.
+   - Deep-linkable page numbers and print stylesheet (`@media print`).
+7. **Tactile Viewfinder HUD** (`src/app/features/gallery/viewfinder/viewfinder-hud.component.ts`):
+   - Knurled mechanical dials with active ticks and live facet counts.
+   - Dual-control design: visual camera stops + accessible native radio/button controls.
+   - Synchronized bi-directionally with URL query parameters.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **28 test files passed, 135 tests passed, 0 failures**
+    - `spatial-layout.spec.ts`: 15 passed (PRNG determinism, hue clustering, frustum culling, bounds, LOD selection).
+    - `viewfinder-filter.spec.ts`: 12 passed (dial stops, OKLab Delta-E swatch matching, composite filter matching, facet counting).
+    - `quality-governor.spec.ts`: 5 passed (frame measurement, throttle degradation, recovery, reduced motion).
+    - `catalog-state.spec.ts`: 8 passed (filtering, query params, shard loading).
+    - `gallery-shell.component.spec.ts`: 3 passed (mode switches, viewfinder toggle, filter clearing).
+    - `dock.component.spec.ts`: 3 passed (mode clicks, keyboard shortcuts 1-4, filter counter).
+    - `viewfinder-hud.component.spec.ts`: 4 passed (rendering, stop selection, color swatch, reset).
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 4.6s.
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero leaks in public dist).
+  - Public initial bundle: **72.26 KB gzipped** (well below budget of &le; 180 KB).
+  - `npm run build:admin`: Admin build completed cleanly; all admin features lazy-loaded.
+
+### Known Limitations
+- Gyroscope tilt on mobile devices requires explicit user interaction permission on iOS 13+ devices, currently falling back to touch velocity drag.
+
