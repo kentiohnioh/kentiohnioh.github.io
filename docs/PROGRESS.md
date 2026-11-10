@@ -431,7 +431,7 @@
 
 ## Phase 10: Hardening, A11y, Performance, Security & CI/CD
 - **Status**: Completed & Verified
-- **Commit**: Pending user confirmation
+- **Commit**: `6e41e1c`
 
 ### What Was Built
 1. **Automated Zero-Leak Secret Scanner** (`scripts/scan-secrets.mjs` & `npm run scan:secrets`):
