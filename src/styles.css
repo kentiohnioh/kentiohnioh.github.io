@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-obsidian: #080b10;
+  --color-obsidian-card: #0d1219;
+  --color-text-primary: #e8ecf2;
+  --color-text-secondary: #9aa4b2;
+  --color-emerald-accent: #34d399;
+  --color-ice-blue: #60a5fa;
+  --color-warm-amber: #fbbf24;
+  --color-safelight-red: #f43f5e;
+}
+
+:root {
+  --bg-obsidian: #080b10;
+  --text-primary: #e8ecf2;
+  --text-secondary: #9aa4b2;
+  --accent-emerald: #34d399;
+  --accent-ice: #60a5fa;
+  --accent-amber: #fbbf24;
+  --safelight-red: #f43f5e;
+
+  /* Ambient Glow Fallback (updated dynamically by AmbientGlowService via OKLCH) */
+  --ambient-glow-1: rgba(52, 211, 153, 0.08);
+  --ambient-glow-2: rgba(96, 165, 250, 0.06);
+  --ambient-glow-3: rgba(251, 191, 36, 0.04);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-obsidian);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ambient Digital Darkroom Glow */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 800px at 15% 20%, var(--ambient-glow-1), transparent 70%),
+    radial-gradient(circle 650px at 85% 30%, var(--ambient-glow-2), transparent 70%),
+    radial-gradient(circle 900px at 50% 85%, var(--ambient-glow-3), transparent 70%);
+  transition: background 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    transition: none;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Glassmorphism System with Solid Fallback */
+.glass-panel {
+  background-color: rgba(13, 18, 25, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card {
+  background-color: rgba(13, 18, 25, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@supports (backdrop-filter: blur(18px)) {
+  .glass-panel {
+    background-color: rgba(13, 18, 25, 0.55);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  }
+
+  .glass-card {
+    background-color: rgba(13, 18, 25, 0.45);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+  }
+}
+
+/* Anti-Download Deterrence Surface (Rule 2) */
+.protected-art {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Print Stylesheet Protection */
+@media print {
+  canvas,
+  [role="img"],
+  .protected-art {
+    display: none !important;
+  }
+  body::after {
+    content: "© Theng Nioh. Protected artwork. Online at https://thengnioh.github.io";
+    display: block;
+    padding: 2rem;
+    font-size: 1rem;
+    color: #000;
+  }
+}
