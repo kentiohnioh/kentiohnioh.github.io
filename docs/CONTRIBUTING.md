@@ -40,3 +40,4 @@ Before submitting any Pull Request:
 5. `npm run validate:catalog` passes schema validation.
 6. `npm run scan:secrets` passes with zero leaked keys or tokens.
 7. Any scope deviation or architectural rationale is recorded in `docs/DECISIONS.md`.
+

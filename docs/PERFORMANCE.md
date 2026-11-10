@@ -61,3 +61,4 @@ Verified via `scripts/verify-bundle.mjs`:
 4. **Dynamic Quality Governor**:
    - Continuously monitors frame execution time.
    - If 30 consecutive frames exceed 20 ms (falling below 50 FPS), visual effects degrade gracefully from `full` $\to$ `reduced` $\to$ `minimal`.
+

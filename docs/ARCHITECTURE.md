@@ -63,3 +63,4 @@ flowchart TD
 ### 5. Protected Public Delivery
 - **Zero Raw `<img>` Tags**: All photographs render directly to WebGL2 canvas textures from memory Blobs.
 - **Client-Side Deterrence**: Context menu intercept, pointer drag cancellation, canvas export deterrence.
+

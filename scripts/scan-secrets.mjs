@@ -61,3 +61,4 @@ if (violations > 0) {
   console.log('✅ Secret scan clean: Zero tokens, private keys, or API credentials detected in codebase.');
   process.exit(0);
 }
+

@@ -70,3 +70,4 @@ The application is engineered to meet or exceed **WCAG 2.2 Level AA** criteria:
    - Ambient background gradients derived from photo palettes are clamped in OKLCH space to ensure background luminance never exceeds safety thresholds ($L \le 0.15$), maintaining text contrast $\ge 7:1$ for white text.
 3. **Minimum Touch Targets**:
    - All interactive buttons and dials provide a minimum target area of $44 \times 44$ CSS pixels.
+
