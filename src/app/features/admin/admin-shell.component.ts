@@ -440,11 +440,11 @@ interface AspectOption {
 
                     <button
                       type="button"
-                      (click)="downloadCatalogShard()"
+                      (click)="saveCatalogFileDirectly()"
                       class="w-full py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-mono text-[11px] transition-colors"
-                      title="Download updated 2026-11.json shard file"
+                      title="Save or download updated 2026-11.json shard file"
                     >
-                      💾 Download Catalog File (2026-11.json)
+                      💾 Save / Download Catalog File (2026-11.json)
                     </button>
                   </div>
 
@@ -607,26 +607,98 @@ export class AdminShellComponent implements OnInit {
     this.fitMode.update((m) => (m === 'cover' ? 'contain' : 'cover'));
   }
 
-  rotateClockwise(): void {
-    this.photoRotation.update((r) => (r + 90) % 360);
-    const p = this.selectedPhoto();
-    if (p) {
-      p.aspect = this.activeAspectRatio();
-      this.syncCurrentPhoto();
-    }
+  async rotateClockwise(): Promise<void> {
+    await this.applyPixelRotation(90);
   }
 
-  rotateCounterClockwise(): void {
-    this.photoRotation.update((r) => (r + 270) % 360);
-    const p = this.selectedPhoto();
-    if (p) {
-      p.aspect = this.activeAspectRatio();
-      this.syncCurrentPhoto();
-    }
+  async rotateCounterClockwise(): Promise<void> {
+    await this.applyPixelRotation(-90);
   }
 
-  toggleFlipH(): void {
-    this.isFlippedH.update((f) => !f);
+  async toggleFlipH(): Promise<void> {
+    await this.applyPixelFlip();
+  }
+
+  private async applyPixelRotation(deg: number): Promise<void> {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    const src = p.placeholder || p.sources?.variants?.[0]?.urls?.[0];
+    if (!src) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load image for rotation'));
+      img.src = src;
+    });
+
+    const offscreen = document.createElement('canvas');
+    if (Math.abs(deg % 180) === 90) {
+      offscreen.width = img.naturalHeight || img.height;
+      offscreen.height = img.naturalWidth || img.width;
+    } else {
+      offscreen.width = img.naturalWidth || img.width;
+      offscreen.height = img.naturalHeight || img.height;
+    }
+
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+
+    ctx.translate(offscreen.width / 2, offscreen.height / 2);
+    ctx.rotate((deg * Math.PI) / 180);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+
+    const newUrl = offscreen.toDataURL('image/jpeg', 0.95);
+    p.width = offscreen.width;
+    p.height = offscreen.height;
+    p.aspect = offscreen.width / offscreen.height;
+    p.placeholder = newUrl;
+    if (p.sources?.variants?.length) {
+      p.sources.variants[0].width = offscreen.width;
+      p.sources.variants[0].height = offscreen.height;
+      p.sources.variants[0].urls = [newUrl];
+    }
+
+    this.selectedPhoto.set({ ...p });
+    this.syncCurrentPhoto();
+    await this.saveDraft();
+  }
+
+  private async applyPixelFlip(): Promise<void> {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    const src = p.placeholder || p.sources?.variants?.[0]?.urls?.[0];
+    if (!src) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load image for flip'));
+      img.src = src;
+    });
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = img.naturalWidth || img.width;
+    offscreen.height = img.naturalHeight || img.height;
+
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+
+    ctx.translate(offscreen.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, 0, 0);
+
+    const newUrl = offscreen.toDataURL('image/jpeg', 0.95);
+    p.placeholder = newUrl;
+    if (p.sources?.variants?.length) {
+      p.sources.variants[0].urls = [newUrl];
+    }
+
+    this.selectedPhoto.set({ ...p });
+    this.syncCurrentPhoto();
+    await this.saveDraft();
   }
 
   selectPhoto(photo: PhotoItem): void {
@@ -828,6 +900,44 @@ export class AdminShellComponent implements OnInit {
     this.publishSuccessMessage.set(
       `"${title}" updated in active catalog. Download the shard below or push to GitHub to deploy live!`
     );
+  }
+
+  async saveCatalogFileDirectly(): Promise<void> {
+    const shardData = {
+      shardId: '2026-11',
+      generatedAt: new Date().toISOString(),
+      photos: this.catalogState.photos(),
+    };
+    const content = JSON.stringify(shardData, null, 2);
+
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as unknown as {
+          showSaveFilePicker: (opts: unknown) => Promise<{
+            createWritable: () => Promise<{
+              write: (c: string) => Promise<void>;
+              close: () => Promise<void>;
+            }>;
+          }>;
+        }).showSaveFilePicker({
+          suggestedName: '2026-11.json',
+          types: [
+            {
+              description: 'Catalog Shard JSON',
+              accept: { 'application/json': ['.json'] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        this.publishSuccessMessage.set('Saved directly to 2026-11.json! Run "git add . && git commit -m \'feat: publish\' && git push" to deploy live.');
+        return;
+      } catch {
+        // User cancelled picker -> fall back to download
+      }
+    }
+    this.downloadCatalogShard();
   }
 
   downloadCatalogShard(): void {
