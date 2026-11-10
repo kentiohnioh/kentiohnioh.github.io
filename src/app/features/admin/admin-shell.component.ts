@@ -393,12 +393,86 @@ export class AdminShellComponent implements OnInit {
     this.selectedPhoto.set(photo);
   }
 
-  onFilesDropped(event: Event): void {
-    // File ingest handler
+  async onFilesDropped(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      // Ingest logic
+    if (!input.files || input.files.length === 0) return;
+
+    const newPhotos: PhotoItem[] = [];
+    for (let i = 0; i < input.files.length; i++) {
+      const file = input.files[i];
+      const objectUrl = URL.createObjectURL(file);
+
+      // Decode image dimensions
+      const img = new Image();
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = objectUrl;
+      });
+
+      const width = img.naturalWidth || 1920;
+      const height = img.naturalHeight || 1080;
+      const id = 'local_' + Math.random().toString(36).substring(2, 10);
+      const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      const title = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      const slug = rawName.toLowerCase().replace(/\s+/g, '-');
+
+      const newPhoto: PhotoItem = {
+        id,
+        slug,
+        title,
+        alt: `Fine art photograph: ${title}`,
+        aspect: width / height,
+        width,
+        height,
+        placeholder: objectUrl,
+        exif: {
+          camera: 'Digital Camera',
+          focalLengthMm: 50,
+          aperture: 2.0,
+          iso: 100,
+          shutterDisplay: '1/250',
+        },
+        grade: null,
+        retouch: null,
+        collectionIds: ['all'],
+        tags: [slug],
+        mood: ['natural'],
+        flags: {
+          hasPeople: false,
+          retouched: false,
+          showBeforeAfter: false,
+        },
+        rights: {
+          copyright: '© Theng Nioh',
+          license: 'All rights reserved',
+        },
+        sources: {
+          variants: [
+            {
+              format: 'webp',
+              width,
+              height,
+              bytes: file.size,
+              sha256: id,
+              urls: [objectUrl],
+            },
+          ],
+        },
+        palette: [
+          { hex: '#141c26', oklch: { l: 0.2, c: 0.05, h: 240 }, weight: 0.5 },
+          { hex: '#e8ecf2', oklch: { l: 0.9, c: 0.02, h: 240 }, weight: 0.5 },
+        ],
+        schemaVersion: 1,
+      };
+      newPhotos.push(newPhoto);
     }
+
+    if (newPhotos.length > 0) {
+      this.stagedPhotos.update((current) => [...newPhotos, ...current]);
+      this.selectedPhoto.set(newPhotos[0]);
+    }
+    input.value = '';
   }
 
   async saveDraft(): Promise<void> {

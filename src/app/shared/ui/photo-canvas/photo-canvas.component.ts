@@ -126,10 +126,38 @@ export class PhotoCanvasComponent implements OnInit, OnDestroy {
       // Fetch bytes through failover loader with adaptive timeout
       const loadResult = await this.loader.load(optimalVariant.urls, this.abortController.signal);
 
-      // Decode to ImageBitmap without persistent object URLs
-      const bitmap = await createImageBitmap(loadResult.blob, {
-        imageOrientation: 'from-image',
-      });
+      // Decode to ImageBitmap with robust fallback for SVGs and data URIs
+      let bitmap: ImageBitmap;
+      try {
+        bitmap = await createImageBitmap(loadResult.blob, {
+          imageOrientation: 'from-image',
+        });
+      } catch {
+        bitmap = await new Promise<ImageBitmap>((resolve, reject) => {
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(loadResult.blob);
+          img.onload = async () => {
+            try {
+              const offscreen = document.createElement('canvas');
+              offscreen.width = img.naturalWidth || 640;
+              offscreen.height = img.naturalHeight || 427;
+              const ctx = offscreen.getContext('2d');
+              ctx?.drawImage(img, 0, 0);
+              const bmp = await createImageBitmap(offscreen);
+              URL.revokeObjectURL(objectUrl);
+              resolve(bmp);
+            } catch (e) {
+              URL.revokeObjectURL(objectUrl);
+              reject(e);
+            }
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Failed to decode image format'));
+          };
+          img.src = objectUrl;
+        });
+      }
 
       // Render onto canvas via shared WebGL2 pipeline
       const cacheKey = `${this.photo.id}:${optimalVariant.width}`;

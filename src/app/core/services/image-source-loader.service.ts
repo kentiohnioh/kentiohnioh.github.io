@@ -103,9 +103,10 @@ export class ImageSourceLoader {
         // Fetch wrapper
         const attemptFetch = async () => {
           try {
+            const isLocal = url.startsWith('blob:') || url.startsWith('data:');
             const resp = await fetch(url, {
               signal: controller.signal,
-              cache: 'force-cache',
+              cache: isLocal ? 'default' : 'force-cache',
             });
 
             if (!resp.ok) {
