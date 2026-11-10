@@ -345,3 +345,4 @@ export class RetouchEngineService {
     return canvas.convertToBlob({ type: 'image/webp', quality: 0.8 });
   }
 }
+

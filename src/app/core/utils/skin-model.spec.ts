@@ -66,3 +66,4 @@ describe('Subject-Relative Skin Color Model & Fairness (Fitzpatrick I-VI)', () =
     expect(pBlueClothes).toBeLessThan(0.01);
   });
 });
+

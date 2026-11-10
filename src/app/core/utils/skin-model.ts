@@ -125,3 +125,4 @@ export function evaluateSkinGateProbability(
 
   return Math.exp(exponent);
 }
+

@@ -51,6 +51,14 @@ export const routes: Routes = [
     title: 'Mask Lab QA — Theng Nioh',
   },
   {
+    path: 'admin/retouch-studio',
+    loadComponent: () =>
+      import('./features/admin/retouch-studio/retouch-studio.component').then(
+        (m) => m.RetouchStudioComponent
+      ),
+    title: 'Retouch Studio — Theng Nioh',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.component').then(

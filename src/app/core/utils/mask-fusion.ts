@@ -155,3 +155,4 @@ export function packWeightsToRgba8(
 
   return [tex0, tex1, tex2];
 }
+

@@ -87,6 +87,7 @@
 
 ## Phase 4: Retouch Engine I — Detection & 12 Masks
 - **Status**: Completed & Verified
+- **Commit**: `98e22d9`
 
 ### What Was Built
 1. **Strict 12-Zone Partition of Unity Normalizer** (`src/app/core/utils/mask-fusion.ts`):
@@ -136,3 +137,55 @@
 ### Known Limitations
 - MediaPipe FaceLandmarker requires WebAssembly and WebGL acceleration. In environments lacking SIMD/WASM support, detection fallback times may be increased.
 - Extreme head poses exceeding 60 degrees yaw may yield partial landmark confidence, where fallback convex hulls are utilized.
+
+---
+
+## Phase 5: Retouch Engine II — Shaders, Sliders & Tools
+- **Status**: Completed & Verified
+
+### What Was Built
+1. **19 Typed Sliders with Natural Ethical Caps & Presets** (`src/app/core/utils/retouch-presets.ts`):
+   - 19 precisely calibrated sliders across 6 categories: Skin, Eyes, Mouth, Details, Lighting, and Atmosphere.
+   - Built-in ethical caps preventing extreme or unnatural deformation (e.g. skin smoothing capped at 60%, teeth whitening at 50%, eye whitening at 50%).
+   - Four production-grade presets:
+     - `Natural`: subtle, imperceptible enhancement honoring natural texture.
+     - `Editorial`: magazine polish with crisp lash and eye acutance.
+     - `Subtle`: minimal touch-up for quick delivery.
+     - `Reset`: zero adjustments, 100% texture retention.
+   - Automatic `isExtremeRetouch()` detection and `clampSlidersToEthicalCaps()`.
+2. **Pure Algorithmic Processing & Protected-Zone Invariance** (`src/app/core/utils/retouch-math.ts`):
+   - `microEdgeGate`: Gaussian rolloff suppressing smoothing across true structural edges (pores, moles, lashes).
+   - `neutralizeRedCast`: neutralizes erythema and redness in OKLab without shifting melanin lightness $L$ or hue.
+   - `applySpotHeal`: smooth circular patch replacement with smoothstep feather falloff.
+   - Natural eye and teeth whitening algorithms respecting anatomical limits.
+   - `computeHighFrequencyRetention`: verifies that protected zones (lashes, brows, irises, hair, beard, glasses) preserve $\ge 95\%$ of their high-frequency energy even at extreme skin smoothing.
+3. **WebGL2 Multi-Pass Retouch Pipeline & Shaders** (`src/app/gpu/shaders/retouch.vert.glsl`, `retouch.frag.glsl`, `src/app/gpu/renderer/retouch-pipeline.ts`):
+   - Full 12-zone GPU retouch shader consuming 3 packed RGBA mask textures.
+   - Interactive Before/After split screen with draggable divider line.
+   - Mask visualizer overlay supporting individual zone inspection and composite false-color preview.
+   - High-quality triangular PDF dithering to eliminate 8-bit quantization banding.
+4. **Retouch Studio State & History Stack** (`src/app/core/services/retouch-state.service.ts`):
+   - Reactive Angular Signals state management for all sliders, spot heals, mask strokes, presets, and active tools.
+   - 30-level undo/redo history stack with `Ctrl+Z` and `Ctrl+Y` shortcuts.
+   - `exportRecipe()` producing standard `RetouchRecipe` records.
+5. **Interactive Retouch Studio View** (`src/app/features/admin/retouch-studio/retouch-studio.component.ts`):
+   - Full-featured studio at `/admin/retouch-studio`.
+   - Tool suite: Select (`V`), Smart Brush (`B`), Mask Eraser (`E`), Spot Healer (`H`), Mask Visualizer (`M`), Split View (`Space`).
+   - Dynamic ethics badge displaying "NATURAL ETHICS" or "EXTREME (CAPPED)".
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **19 test files passed, 74 tests passed, 0 failures**
+    - `retouch-presets.spec.ts`: 5 passed (19 typed sliders, preset validity, ethical cap clamping, negative backgroundDim range).
+    - `retouch-math.spec.ts`: 5 passed (microEdgeGate attenuation, red cast neutralization in OKLab, teeth whitening, sclera radiance, spot healing feather).
+    - `protected-zone-invariance.spec.ts`: 1 passed (mathematically proves $\ge 95\%$ high-frequency energy retention on protected zones under 100% skin smoothing).
+    - `retouch-state.service.spec.ts`: 6 passed (Signals reactivity, undo/redo stack restoration, spot heal mutations, mask visualizer cycling).
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 3.9s.
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero `@mediapipe` references in public dist).
+  - Public initial bundle: **70.96 KB gzipped** (well below budget of &le; 180 KB).
+  - `npm run build:admin`: Admin build completed cleanly; `retouch-studio-component` (30.3 KB raw / 7.8 KB gzip) and `mask-lab-component` load strictly as lazy chunks.
+
+### Known Limitations
+- Spot healing operates in 2D texture space; complex non-convex donor patch warping requires advanced Poisson blending, planned for a future update.
+- WebGL2 hardware acceleration is required for real-time 60 FPS slider preview; machines without WebGL2 can run offline CPU-rendered exports.

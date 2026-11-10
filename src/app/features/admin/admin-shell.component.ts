@@ -27,7 +27,14 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <div class="glass-panel p-6 rounded-lg space-y-3">
-          <h2 class="text-xs font-mono uppercase tracking-wider text-ice-blue">2. 12-Zone Retouch</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-wider text-ice-blue">2. 12-Zone Retouch</h2>
+            <div class="flex gap-2">
+              <a routerLink="/admin/mask-lab" class="text-[10px] font-mono text-white/50 hover:text-white uppercase">QA Lab</a>
+              <span class="text-white/20">|</span>
+              <a routerLink="/admin/retouch-studio" class="text-[10px] font-mono text-ice-blue hover:underline uppercase">Launch Studio &rarr;</a>
+            </div>
+          </div>
           <p class="text-sm text-neutral-400">
             Partition of unity anatomical segmentation: hair, skin, eye suite, teeth, and background protection.
           </p>
