@@ -69,3 +69,4 @@ describe('VibeSearchComponent', () => {
     expect(component.results()).toHaveLength(0);
   });
 });
+

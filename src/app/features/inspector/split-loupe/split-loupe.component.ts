@@ -145,3 +145,4 @@ export class SplitLoupeComponent {
     this.splitPosition.set(Math.max(0, Math.min(1, pos)));
   }
 }
+

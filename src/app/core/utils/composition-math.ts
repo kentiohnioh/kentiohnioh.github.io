@@ -195,3 +195,4 @@ export function estimateLightingDirection(
     isEstimated: true,
   };
 }
+

@@ -173,3 +173,4 @@ export class CompositionOverlayComponent implements OnChanges {
     this.lighting.set(estimated);
   }
 }
+

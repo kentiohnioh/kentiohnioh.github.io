@@ -53,3 +53,4 @@ This evaluation document benchmarks the retrieval precision and latency of the d
 - **Mean Query Execution Latency**: **0.32 ms** &mdash; well within the $\le 50$ ms budget
 - **Quantization Roundtrip Max Error**: **0.00787** ($< 0.015$ threshold)
 - **Privacy Guarantee**: 100% of tokenization, matching, and dot-product calculations execute locally inside the visitor's browser thread/worker. Zero photo bytes or queries leave the device.
+

@@ -64,3 +64,4 @@ describe('histogram-math', () => {
     expect(hist.maxBinCount).toBe(1);
   });
 });
+

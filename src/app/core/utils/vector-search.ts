@@ -184,3 +184,4 @@ export function rankPhotos(
   // Sort descending by score
   return results.sort((a, b) => b.score - a.score);
 }
+

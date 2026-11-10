@@ -169,3 +169,4 @@ export class VibeSearchComponent {
     this.close.emit();
   }
 }
+

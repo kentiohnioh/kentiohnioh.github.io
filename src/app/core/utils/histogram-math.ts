@@ -82,3 +82,4 @@ export function computeHistogram(
     maxBinCount: Math.max(1, maxBin),
   };
 }
+

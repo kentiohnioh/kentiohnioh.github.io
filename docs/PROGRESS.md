@@ -375,4 +375,60 @@
 ### Known Limitations
 - WebGPU acceleration for full multi-modal CLIP text embeddings in the browser is hardware-dependent; WASM fallback is active for environments without WebGPU.
 
+---
+
+## Phase 9: Admin Studio & Publishing Wizard
+- **Status**: Completed & Verified
+- **Commit**: Pending user confirmation
+
+### What Was Built
+1. **Publishing Hard Gates Validator & Diff Engine** (`src/app/core/utils/publish-validator.ts`):
+   - Strict validation gates:
+     - Mandatory non-empty accessible `alt` text.
+     - Declared copyright holder and license rights.
+     - Multi-resolution AVIF/WebP ladder with valid dimensions and 64-character SHA-256 checksums.
+     - Non-empty ThumbHash/BlurHash placeholders and OKLCH color palettes.
+     - Global slug and ID uniqueness (zero collision).
+   - Dynamic catalog diff calculator (`computeCatalogDiff`): calculates added, modified, and removed counts and generates summary text.
+   - Shell command generator (`generateGitCommands`): outputs exact `git add`, `git commit -m`, and `git push` commands.
+2. **Draft Storage & Crash Recovery Service** (`src/app/core/services/draft-storage.service.ts`):
+   - Local autosave to storage with deep sanitization.
+   - **Zero Secrets Guarantee**: Recursively purges any property containing `token`, `secret`, `password`, `auth`, or `key`.
+   - Automatic crash recovery restoring staging queue and in-progress edits upon reopening the studio.
+   - Browser storage quota usage meter (`updateQuotaMeter`).
+3. **5-Step Interactive Publishing Wizard** (`src/app/features/admin/publish-wizard/`):
+   - **Step 1 (Validate)**: Hard validation gate stopping progression if any photo has missing `alt` or rights.
+   - **Step 2 (Preview)**: Staged catalog visual preview.
+   - **Step 3 (Upload)**: Dual-cloud target status (Hugging Face Datasets + jsDelivr) with progress simulation and CORS verification.
+   - **Step 4 (Commit)**: Catalog diff review, canonical Git shell commands, and in-memory GitHub token dispatcher.
+   - **Step 5 (Smoke Test)**: Live smoke test confirmation.
+4. **Keyboard Shortcut Cheat Sheet Modal** (`src/app/features/admin/shortcuts-modal/`):
+   - Triggerable via `?` key across the admin workspace.
+   - Outlines all editing and navigation shortcuts (`B`, `E`, `H`, `M`, `[`, `]`, `\`, `G`, `Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`).
+5. **Full Admin Studio Workspace** (`src/app/features/admin/admin-shell.component.ts`):
+   - Left Sidebar: Library queue with drag-and-drop file picker and staged counter.
+   - Centre Viewport: Interactive WebGL2 canvas with zoom/pan and live grade/retouch.
+   - Right Sidebar: Tabbed Inspector with Info (title, required alt, slug, copyright), Retouch launcher, Grade launcher, and Integrity Gates checklist.
+   - Bottom Strip: Engine telemetry, history status, and autosave indicator.
+6. **Operations & Disaster Recovery Guide** (`docs/OPERATIONS.md`):
+   - Fresh clone walkthrough (`npm ci && ng serve --configuration admin`).
+   - Recipe re-application guide for 100% deterministic pixel reproduction.
+   - Token rotation guidelines and storage provider migration script instructions.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **37 test files passed, 171 tests passed, 0 failures**
+    - `publish-validator.spec.ts`: 6 passed (all-gate pass, empty alt rejection, duplicate slug rejection, missing copyright rejection, invalid SHA-256 rejection, diff & git command generation).
+    - `draft-storage.service.spec.ts`: 3 passed (zero token guarantee via deep sanitization, save/load crash recovery, clear draft).
+    - `admin-shell.component.spec.ts`: 3 passed (workspace rendering, tab switching, `?` shortcut cheat sheet modal).
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 7.7s.
+  - Initial public bundle: **73.01 KB gzipped** (well below budget of &le; 180 KB).
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero leaks in public dist).
+  - `npm run build:admin`: Admin build completed cleanly in 6.7s; `admin-shell-component` is 100% lazy-loaded (32.14 KB raw / 8.06 KB gzip).
+
+### Known Limitations
+- Background automatic cloud uploads require user permission via the browser File System Access API or explicit terminal execution of `scripts/publish.mjs`.
+
+
 

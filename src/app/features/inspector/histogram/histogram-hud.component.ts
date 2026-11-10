@@ -242,3 +242,4 @@ export class HistogramHudComponent implements OnChanges {
     ctx.fill();
   }
 }
+
