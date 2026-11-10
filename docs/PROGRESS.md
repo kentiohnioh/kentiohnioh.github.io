@@ -195,6 +195,7 @@
 
 ## Phase 6: Live WebGL2 Colour Grading, 3D LUTs & Film Profiles
 - **Status**: Completed & Verified
+- **Commit**: `f05e3f1`
 
 ### What Was Built
 1. **Adobe .CUBE 3D/1D Parser, Serializer & Trilinear Sampler** (`src/app/core/utils/cube-lut.ts`):
