@@ -209,3 +209,4 @@ export class PublishValidator {
     return { add, commit, push, fullScript };
   }
 }
+

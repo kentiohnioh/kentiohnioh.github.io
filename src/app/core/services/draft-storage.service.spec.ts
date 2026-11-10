@@ -73,3 +73,4 @@ describe('DraftStorageService', () => {
     expect(service.lastSavedAt()).toBeNull();
   });
 });
+

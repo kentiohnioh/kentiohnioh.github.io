@@ -12,6 +12,8 @@
     "test": "ng test --watch false",
     "verify:bundle": "node scripts/verify-bundle.mjs",
     "validate:catalog": "node scripts/validate-catalog.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "publish:verify": "node scripts/publish.mjs",
     "fetch:samples": "node scripts/fetch-samples.mjs"
   },
   "private": true,

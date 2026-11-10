@@ -82,3 +82,4 @@ describe('AdminShellComponent', () => {
     expect(component.showShortcuts()).toBe(true);
   });
 });
+

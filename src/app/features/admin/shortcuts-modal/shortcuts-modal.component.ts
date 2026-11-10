@@ -105,3 +105,4 @@ import { CommonModule } from '@angular/common';
 export class ShortcutsModalComponent {
   @Output() close = new EventEmitter<void>();
 }
+

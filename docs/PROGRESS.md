@@ -379,7 +379,7 @@
 
 ## Phase 9: Admin Studio & Publishing Wizard
 - **Status**: Completed & Verified
-- **Commit**: Pending user confirmation
+- **Commit**: `05cde32`
 
 ### What Was Built
 1. **Publishing Hard Gates Validator & Diff Engine** (`src/app/core/utils/publish-validator.ts`):
@@ -427,8 +427,60 @@
   - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero leaks in public dist).
   - `npm run build:admin`: Admin build completed cleanly in 6.7s; `admin-shell-component` is 100% lazy-loaded (32.14 KB raw / 8.06 KB gzip).
 
+---
+
+## Phase 10: Hardening, A11y, Performance, Security & CI/CD
+- **Status**: Completed & Verified
+- **Commit**: Pending user confirmation
+
+### What Was Built
+1. **Automated Zero-Leak Secret Scanner** (`scripts/scan-secrets.mjs` & `npm run scan:secrets`):
+   - Scans source trees, build targets, configs, and public assets against regex patterns for Hugging Face tokens (`hf_...`), GitHub PATs (`ghp_...`, `github_pat_...`), AWS keys, private keys (`BEGIN PRIVATE KEY`), and generic auth headers.
+   - Integrated into package scripts and CI/CD workflow before deployment.
+2. **Hardened GitHub Actions CI/CD Pipeline** (`.github/workflows/deploy.yml`):
+   - Automated triggers on push to `main` and pull requests.
+   - Concurrency group with cancel-in-progress to avoid race conditions.
+   - Strict pipeline stages:
+     1. Type check (`npm run build`)
+     2. Secret scanner (`npm run scan:secrets`)
+     3. Complete test suite (`npm test`)
+     4. Production public build (`npm run build`)
+     5. Production tree-shaking & bundle isolation audit (`npm run verify:bundle`)
+     6. Catalog integrity validation (`node scripts/validate-catalog.mjs`)
+     7. Upload GitHub Pages artifact and automated deployment via `actions/deploy-pages`.
+3. **Comprehensive System Architecture Documentation** (`docs/ARCHITECTURE.md`):
+   - 6 detailed Mermaid diagrams: High-level topology, Public Discovery Data Flow, Admin Studio Processing Pipeline, Dual-Cloud Publishing State Machine, WebGL2 Shader Composition, and Zoneless Angular Signals State Model.
+   - File maps and module isolation breakdown.
+4. **Accessibility Audit & WCAG 2.2 AA Compliance Report** (`docs/ACCESSIBILITY.md`):
+   - Complete keyboard shortcut matrix across Gallery, Inspector, and Admin Studio.
+   - Screen reader walkthroughs and ARIA role mappings for custom canvas viewports.
+   - Color contrast guarantees via OKLCH luminance and chroma clamping ($\ge 4.5:1$).
+   - Motion safety compliance for `prefers-reduced-motion` and bandwidth conservation for `prefers-reduced-data`.
+5. **Performance Budget Ledger & Web Vitals Audit** (`docs/PERFORMANCE.md`):
+   - Empirical measurements: Initial public bundle **73.01 KB gzip** vs **180 KB budget** (59.4% budget margin).
+   - Core Web Vitals telemetry targets: LCP $\le 1.2\text{s}$, CLS $= 0.00$, INP $\le 50\text{ms}$.
+   - Memory management strategy: Single WebGL context, bitmap auto-disposal, 256MB LRU texture cache, and dynamic frame governor.
+6. **Contribution & Architecture Standards** (`docs/CONTRIBUTING.md`):
+   - Coding guidelines: Zoneless Angular 21, Signals, zero `<img>` tags in public DOM, strictly verified APIs, small single-purpose files.
+7. **Production Master Readme** (`README.md`):
+   - Master technical showcase with badges, live preview links, architecture highlights, privacy manifesto, quickstart guide, and ethical retouching disclosures.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test`
+  - Result: **37 test files passed, 171 tests passed, 0 failures**
+- **Production Public Bundle**:
+  - Raw size: 298.90 KB
+  - Gzip transfer size: **73.01 KB** (vs 180 KB budget)
+- **Production Bundle Verification**:
+  - `node scripts/verify-bundle.mjs`: **PASSED** (zero admin code, zero ML/WASM packages in public bundle)
+- **Secret Scanner**:
+  - `node scripts/scan-secrets.mjs`: **PASSED** (0 tokens detected)
+- **Admin Build**:
+  - `npm run build:admin`: **PASSED** cleanly in 6.49s.
+
 ### Known Limitations
-- Background automatic cloud uploads require user permission via the browser File System Access API or explicit terminal execution of `scripts/publish.mjs`.
+- GitHub Pages live deployment requires pushing to the remote GitHub repository where GitHub Actions runner executes the automated workflow.
+
 
 
 

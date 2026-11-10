@@ -37,6 +37,9 @@ jobs:
       - name: Verify Catalog Schema
         run: npm run validate:catalog
 
+      - name: Scan Codebase For Secrets & Tokens
+        run: npm run scan:secrets
+
       - name: Run Unit Tests
         run: npm test
 

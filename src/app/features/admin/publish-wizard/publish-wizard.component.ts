@@ -301,3 +301,4 @@ export class PublishWizardComponent implements OnInit {
     this.close.emit();
   }
 }
+
