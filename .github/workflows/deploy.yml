@@ -43,8 +43,12 @@ jobs:
       - name: Run Unit Tests
         run: npm test
 
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
       - name: Build Production Site (Public Configuration)
-        run: npm run build
+        run: npx ng build --configuration production --base-href "${{ steps.pages.outputs.base_path }}/"
 
       - name: Verify Bundle Tree-Shaking (No Admin / Encoders / MediaPipe)
         run: npm run verify:bundle
@@ -53,9 +57,6 @@ jobs:
         run: |
           cp dist/theng-nioh/browser/index.html dist/theng-nioh/browser/404.html
           touch dist/theng-nioh/browser/.nojekyll
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
