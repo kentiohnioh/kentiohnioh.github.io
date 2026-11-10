@@ -12,7 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CatalogStateService } from '../../core/services/catalog-state.service';
 import { DraftStorageService } from '../../core/services/draft-storage.service';
-import { PhotoItem } from '../../core/models/catalog.model';
+import { PhotoItem, CollectionRef } from '../../core/models/catalog.model';
 import { PhotoCanvasComponent } from '../../shared/ui/photo-canvas/photo-canvas.component';
 import { PublishWizardComponent } from './publish-wizard/publish-wizard.component';
 import { ShortcutsModalComponent } from './shortcuts-modal/shortcuts-modal.component';
@@ -24,6 +24,14 @@ interface AspectOption {
   label: string;
   value: number; // 0 represents natural / original
 }
+
+const DEFAULT_COLLECTIONS: CollectionRef[] = [
+  { id: 'heritage', slug: 'heritage', title: 'Heritage & Ancient Architecture', count: 0, description: 'Sacred monuments, stone carvings, and ancient temples.' },
+  { id: 'portraits', slug: 'portraits', title: 'Portraits & Human Nuance', count: 0, description: 'Human stillness, natural skin tones, and honest character studies.' },
+  { id: 'travel', slug: 'travel', title: 'Travel & Expeditions', count: 0, description: 'Journeys through sacred landscapes and timeless cultures.' },
+  { id: 'street', slug: 'street', title: 'Urban Cadence', count: 0, description: 'Fleeting moments and street scenes.' },
+  { id: 'nature', slug: 'nature', title: 'Organic Forms', count: 0, description: 'Nature, landscapes, and organic light.' },
+];
 
 @Component({
   selector: 'app-admin-shell',
@@ -71,9 +79,16 @@ interface AspectOption {
           <button
             type="button"
             (click)="publishDirectly()"
-            class="px-4 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+            [disabled]="isPublishing()"
+            class="px-4 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>&uarr;</span> Publish to Live Site
+            @if (isPublishing()) {
+              <span class="inline-block animate-spin mr-1">⟳</span>
+              <span>Publishing...</span>
+            } @else {
+              <span>&uarr;</span>
+              <span>Publish to Live Site</span>
+            }
           </button>
 
           <div class="w-px h-5 bg-neutral-800 mx-1"></div>
@@ -348,6 +363,56 @@ interface AspectOption {
                     </div>
                   </div>
 
+                  <!-- Album / Collection Section -->
+                  <div class="pt-2 border-t border-neutral-800 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="text-[10px] text-neutral-400 uppercase font-semibold">Album / Collection</label>
+                      <button
+                        type="button"
+                        (click)="showNewAlbumForm.set(!showNewAlbumForm())"
+                        class="text-[10px] text-emerald-400 hover:underline font-mono"
+                      >
+                        {{ showNewAlbumForm() ? 'Cancel' : '+ New Album' }}
+                      </button>
+                    </div>
+
+                    @if (showNewAlbumForm()) {
+                      <div class="p-2.5 rounded-lg bg-neutral-900 border border-neutral-700 space-y-2">
+                        <label class="text-[9px] text-neutral-400 uppercase block">New Album Name</label>
+                        <input
+                          type="text"
+                          [(ngModel)]="newAlbumTitle"
+                          class="admin-input"
+                          placeholder="e.g. Angkor Wat & Cambodia"
+                        />
+                        <button
+                          type="button"
+                          (click)="createAlbum()"
+                          class="w-full py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-[10px] transition-colors"
+                        >
+                          Create & Assign to Album
+                        </button>
+                      </div>
+                    }
+
+                    <!-- Collection Badges -->
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                      @for (col of collections(); track col.id) {
+                        <button
+                          type="button"
+                          (click)="toggleCollection(col.id)"
+                          [class.bg-emerald-500]="isPhotoInCollection(col.id)"
+                          [class.text-neutral-950]="isPhotoInCollection(col.id)"
+                          [class.font-bold]="isPhotoInCollection(col.id)"
+                          [class.text-neutral-300]="!isPhotoInCollection(col.id)"
+                          class="px-2 py-0.5 rounded text-[11px] bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition-colors"
+                        >
+                          {{ col.title }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+
                   <!-- Tags -->
                   <div class="pt-2 border-t border-neutral-800">
                     <label class="text-[10px] text-neutral-500 uppercase block mb-1">Tags (Comma-separated)</label>
@@ -433,9 +498,16 @@ interface AspectOption {
                     <button
                       type="button"
                       (click)="publishDirectly()"
-                      class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold font-mono text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                      [disabled]="isPublishing()"
+                      class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold font-mono text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      <span>🚀</span> Publish Photo to Portfolio
+                      @if (isPublishing()) {
+                        <span class="inline-block animate-spin mr-1">⟳</span>
+                        <span>Deploying to GitHub Pages...</span>
+                      } @else {
+                        <span>🚀</span>
+                        <span>Publish to Live Portfolio</span>
+                      }
                     </button>
 
                     <button
@@ -564,6 +636,55 @@ export class AdminShellComponent implements OnInit {
   readonly customAspect = signal<number | null>(null);
   readonly photoRotation = signal<number>(0);
   readonly isFlippedH = signal<boolean>(false);
+
+  readonly collections = signal<CollectionRef[]>(DEFAULT_COLLECTIONS);
+  readonly showNewAlbumForm = signal<boolean>(false);
+  newAlbumTitle = '';
+  readonly isPublishing = signal<boolean>(false);
+
+  isPhotoInCollection(colId: string): boolean {
+    const p = this.selectedPhoto();
+    if (!p || !p.collectionIds) return false;
+    return p.collectionIds.includes(colId);
+  }
+
+  toggleCollection(colId: string): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.collectionIds = p.collectionIds ? [...p.collectionIds] : [];
+    if (p.collectionIds.includes(colId)) {
+      p.collectionIds = p.collectionIds.filter((id) => id !== colId);
+    } else {
+      p.collectionIds.push(colId);
+    }
+    this.syncCurrentPhoto();
+    this.saveDraft();
+  }
+
+  createAlbum(): void {
+    const title = this.newAlbumTitle.trim();
+    if (!title) return;
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `album-${Date.now()}`;
+    const newCol: CollectionRef = {
+      id: slug,
+      slug,
+      title,
+      count: 1,
+      description: `Collection of works: ${title}`,
+    };
+    this.collections.update((cols) => [newCol, ...cols]);
+    this.toggleCollection(slug);
+    this.newAlbumTitle = '';
+    this.showNewAlbumForm.set(false);
+  }
+
+  getAlbumNamesForPhoto(photo: PhotoItem): string {
+    if (!photo.collectionIds || photo.collectionIds.length === 0) return 'Unassigned';
+    const names = photo.collectionIds
+      .map((id) => this.collections().find((c) => c.id === id || c.slug === id)?.title || id)
+      .filter((n) => n !== 'all');
+    return names.join(', ') || 'Unassigned';
+  }
 
   readonly activeAspectRatio = computed<number>(() => {
     if (this.customAspect() !== null && this.customAspect()! > 0) {
@@ -754,6 +875,12 @@ export class AdminShellComponent implements OnInit {
       await this.catalogState.loadIndex();
     }
 
+    // Load collections from index if present
+    const idx = this.catalogState.index();
+    if (idx?.collections && idx.collections.length > 0) {
+      this.collections.set(idx.collections);
+    }
+
     // 2. Filter out any legacy sample placeholders (ids starting with f1a9c3d4e5b600)
     const initialCatalog = this.catalogState
       .photos()
@@ -891,15 +1018,46 @@ export class AdminShellComponent implements OnInit {
     setTimeout(() => this.publishSuccessMessage.set(null), 3000);
   }
 
-  publishDirectly(): void {
+  async publishDirectly(): Promise<void> {
     const staged = this.stagedPhotos();
-    this.catalogState.photos.set([...staged]);
-    this.saveDraft();
+    if (staged.length === 0) {
+      alert('No photographs in library to publish.');
+      return;
+    }
 
-    const title = this.selectedPhoto()?.title || 'Selected photograph';
-    this.publishSuccessMessage.set(
-      `"${title}" updated in active catalog. Download the shard below or push to GitHub to deploy live!`
-    );
+    this.isPublishing.set(true);
+    this.publishSuccessMessage.set('Publishing photographs & albums to live portfolio...');
+
+    // 1. Update in-memory state & draft
+    this.catalogState.photos.set([...staged]);
+    await this.draftStorage.saveDraft(staged);
+
+    // 2. Try connecting to local Admin Bridge on port 4201
+    try {
+      const resp = await fetch('http://127.0.0.1:4201/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photos: staged,
+          collections: this.collections(),
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        this.publishSuccessMessage.set(
+          `✓ Success! Published ${staged.length} photograph(s) and synced to GitHub Pages! Your live site is deploying now.`
+        );
+        this.isPublishing.set(false);
+        return;
+      }
+    } catch {
+      // Local bridge is offline -> fallback to direct saving
+    }
+
+    // 3. Fallback: Save or download catalog file directly
+    this.isPublishing.set(false);
+    await this.saveCatalogFileDirectly();
   }
 
   async saveCatalogFileDirectly(): Promise<void> {
@@ -965,7 +1123,7 @@ export class AdminShellComponent implements OnInit {
   }
 
   async onPublished(): Promise<void> {
-    this.publishDirectly();
-    await this.draftStorage.clearDraft();
+    await this.publishDirectly();
+    // Do NOT clear draft so photographs remain in the library
   }
 }

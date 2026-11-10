@@ -5,7 +5,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "start:admin": "ng serve --configuration admin",
+    "start:admin": "node scripts/start-admin.mjs",
     "build": "ng build --configuration production",
     "build:admin": "ng build --configuration admin-prod",
     "watch": "ng build --watch --configuration development",
