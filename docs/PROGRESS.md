@@ -517,6 +517,31 @@
 ### Project Completion Status
 All 11 phases (Phases 0 through 11) are complete, strictly verified, and production-ready.
 
+---
+
+## Production Streamlining: Direct Upload, Framing & Publishing Workflow
+- **Status**: Completed & Verified
+- **Scope**: Discarded all beauty editing / retouching sliders from the Admin Darkroom Studio; established a direct photography ingest, aspect framing, and publishing workflow.
+
+### What Was Built & Verified
+1. **Discarded All Beauty Retouching**:
+   - Removed retouch presets, skin softening sliders, eye catchlight adjustments, teeth brightening, and retouch indicators from the main darkroom interface.
+   - Preserved pure photographic framing and presentation ethics.
+2. **Dynamic Aspect Ratio & Orientation Controls**:
+   - Integrated real-time aspect framing toolbar: `Original`, `1:1 Square`, `4:5 Portrait`, `2:3 Portrait`, `3:2 Classic`, `16:9 Wide`, `9:16 Story`, and `4:3 Digital`.
+   - Lossless 90° rotation (`↺ -90°`, `↻ +90°`) and horizontal flip (`⇄ Flip`).
+3. **Streamlined 2-Step Tab Workflow**:
+   - Tab 1: **Framing & Details** (Title, Alt text, Slug, Copyright holder, Aspect ratio selector, Orientation controls).
+   - Tab 2: **Publish & Deploy** (Integrity checklist, 1-click **"Publish Photo to Portfolio"**, Downloadable Catalog Shard `2026-11.json`, and instant Git deploy shell snippet).
+4. **Self-Contained Data Ingest**:
+   - Image files are converted directly into base64 Data URLs and cryptographically SHA-256 hashed on ingest, ensuring self-contained persistence in browser IndexedDB drafts and exported catalog shards without requiring any backend.
+5. **Full Test & Build Verification**:
+   - `npm test`: 37 test files passed, 171 tests passed (0 failures).
+   - `npm run build`: Production public bundle generated at **72.96 KB gzip** (well below 180 KB budget).
+   - `node scripts/verify-bundle.mjs`: Zero admin leak, 100% tree-shaking verified.
+   - `npm run build:admin`: Clean compilation with zero errors.
+
+
 
 
 

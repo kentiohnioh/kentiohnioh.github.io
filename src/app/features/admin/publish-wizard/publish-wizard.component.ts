@@ -183,7 +183,7 @@ export type WizardStep = 1 | 2 | 3 | 4 | 5;
             <div>
               <h3 class="text-xl font-serif text-neutral-100">Live Smoke Test Passed!</h3>
               <p class="text-xs font-mono text-neutral-400 mt-1">
-                Index verified at <span class="text-emerald-400">https://thengnioh.github.io/catalog/index.json</span>
+                Index verified at <span class="text-emerald-400">https://kentiohnioh.github.io/catalog/index.json</span>
               </p>
             </div>
             <div class="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-xs font-mono text-neutral-300 max-w-md mx-auto text-left space-y-1">

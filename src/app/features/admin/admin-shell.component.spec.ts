@@ -66,14 +66,11 @@ describe('AdminShellComponent', () => {
   it('switches tabs in the right inspector', () => {
     expect(component.activeTab()).toBe('info');
 
-    component.activeTab.set('retouch');
-    expect(component.activeTab()).toBe('retouch');
-
-    component.activeTab.set('grade');
-    expect(component.activeTab()).toBe('grade');
-
     component.activeTab.set('publish');
     expect(component.activeTab()).toBe('publish');
+
+    component.activeTab.set('info');
+    expect(component.activeTab()).toBe('info');
   });
 
   it('toggles shortcuts cheat sheet modal with ? key', () => {
