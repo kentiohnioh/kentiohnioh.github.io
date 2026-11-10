@@ -45,7 +45,9 @@ import { GpuRendererService } from '../../../gpu/renderer/gpu-renderer.service';
       <!-- Shared GPU Renderer Canvas Target -->
       <canvas
         #canvasTarget
-        class="w-full h-full object-cover block transition-all duration-300"
+        [class.object-cover]="fitMode === 'cover'"
+        [class.object-contain]="fitMode === 'contain'"
+        class="w-full h-full block transition-all duration-300"
         [style.transform]="canvasTransform"
         [class.opacity-0]="isLoading()"
         [class.opacity-100]="!isLoading()"
@@ -82,6 +84,7 @@ export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
   @Input() recipe?: ColorGradeRecipe | null;
   @Input() rotation = 0;
   @Input() flipH = false;
+  @Input() fitMode: 'cover' | 'contain' = 'cover';
 
   get canvasTransform(): string {
     const parts: string[] = [];
@@ -114,7 +117,7 @@ export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['photo'] && !changes['photo'].firstChange) {
       this.loadImage();
-    } else if (changes['recipe'] || changes['exposure'] || changes['watermarkOpacity']) {
+    } else if (changes['recipe'] || changes['exposure'] || changes['watermarkOpacity'] || changes['fitMode']) {
       this.loadImage();
     }
   }
@@ -129,10 +132,13 @@ export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private async loadImage(): Promise<void> {
-    if (!this.photo || !this.photo.sources.variants.length) return;
+    if (!this.photo || !this.photo.sources?.variants?.length) return;
 
     this.isLoading.set(true);
     this.hasError.set(false);
+    if (this.abortController) {
+      this.abortController.abort();
+    }
     this.abortController = new AbortController();
 
     try {
@@ -147,40 +153,64 @@ export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
         dpr
       );
 
-      // Fetch bytes through failover loader with adaptive timeout
-      const loadResult = await this.loader.load(optimalVariant.urls, this.abortController.signal);
-
-      // Decode to ImageBitmap with robust fallback for SVGs and data URIs
       let bitmap: ImageBitmap;
-      try {
-        bitmap = await createImageBitmap(loadResult.blob, {
-          imageOrientation: 'from-image',
-        });
-      } catch {
+      const primaryUrl = optimalVariant.urls[0] || this.photo.placeholder;
+
+      if (primaryUrl && (primaryUrl.startsWith('data:') || primaryUrl.startsWith('blob:'))) {
         bitmap = await new Promise<ImageBitmap>((resolve, reject) => {
           const img = new Image();
-          const objectUrl = URL.createObjectURL(loadResult.blob);
           img.onload = async () => {
             try {
+              const bmp = await createImageBitmap(img);
+              resolve(bmp);
+            } catch {
               const offscreen = document.createElement('canvas');
               offscreen.width = img.naturalWidth || 640;
               offscreen.height = img.naturalHeight || 427;
               const ctx = offscreen.getContext('2d');
               ctx?.drawImage(img, 0, 0);
               const bmp = await createImageBitmap(offscreen);
-              URL.revokeObjectURL(objectUrl);
               resolve(bmp);
-            } catch (e) {
-              URL.revokeObjectURL(objectUrl);
-              reject(e);
             }
           };
-          img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            reject(new Error('Failed to decode image format'));
-          };
-          img.src = objectUrl;
+          img.onerror = () => reject(new Error('Failed to decode image data'));
+          img.src = primaryUrl;
         });
+      } else {
+        // Fetch bytes through failover loader with adaptive timeout
+        const loadResult = await this.loader.load(optimalVariant.urls, this.abortController.signal);
+
+        // Decode to ImageBitmap with robust fallback for SVGs and data URIs
+        try {
+          bitmap = await createImageBitmap(loadResult.blob, {
+            imageOrientation: 'from-image',
+          });
+        } catch {
+          bitmap = await new Promise<ImageBitmap>((resolve, reject) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(loadResult.blob);
+            img.onload = async () => {
+              try {
+                const offscreen = document.createElement('canvas');
+                offscreen.width = img.naturalWidth || 640;
+                offscreen.height = img.naturalHeight || 427;
+                const ctx = offscreen.getContext('2d');
+                ctx?.drawImage(img, 0, 0);
+                const bmp = await createImageBitmap(offscreen);
+                URL.revokeObjectURL(objectUrl);
+                resolve(bmp);
+              } catch (e) {
+                URL.revokeObjectURL(objectUrl);
+                reject(e);
+              }
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(objectUrl);
+              reject(new Error('Failed to decode image format'));
+            };
+            img.src = objectUrl;
+          });
+        }
       }
 
       // Render onto canvas via shared WebGL2 pipeline

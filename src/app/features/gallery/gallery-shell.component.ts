@@ -95,14 +95,19 @@ import { VibeSearchComponent } from './vibe-search/vibe-search.component';
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h8"/>
               </svg>
             </div>
-            <p class="text-neutral-300 font-serif text-lg mb-2">No photographs matched your criteria.</p>
-            <p class="text-neutral-500 text-xs font-mono mb-6">Try relaxing focal length, aperture stops, or clearing active filters.</p>
-            <button
-              (click)="clearFilters()"
-              class="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-700 text-emerald-400 text-xs font-mono tracking-wider hover:bg-neutral-800 transition-colors"
-            >
-              Reset All Dials
-            </button>
+            @if (catalogState.photos().length === 0) {
+              <p class="text-neutral-300 font-serif text-lg mb-2">No photographs published yet.</p>
+              <p class="text-neutral-500 text-xs font-mono mb-6">Check back soon for new photographic exhibitions.</p>
+            } @else {
+              <p class="text-neutral-300 font-serif text-lg mb-2">No photographs matched your criteria.</p>
+              <p class="text-neutral-500 text-xs font-mono mb-6">Try relaxing focal length, aperture stops, or clearing active filters.</p>
+              <button
+                (click)="clearFilters()"
+                class="px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-700 text-emerald-400 text-xs font-mono tracking-wider hover:bg-neutral-800 transition-colors"
+              >
+                Reset All Dials
+              </button>
+            }
           </div>
         } @else {
           <!-- Mode Switcher Display -->

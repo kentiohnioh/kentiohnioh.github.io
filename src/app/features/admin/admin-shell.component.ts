@@ -19,6 +19,12 @@ import { ShortcutsModalComponent } from './shortcuts-modal/shortcuts-modal.compo
 
 type InspectorTab = 'info' | 'publish';
 
+interface AspectOption {
+  id: string;
+  label: string;
+  value: number; // 0 represents natural / original
+}
+
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
@@ -31,16 +37,16 @@ type InspectorTab = 'info' | 'publish';
     ShortcutsModalComponent,
   ],
   template: `
-    <div class="h-screen flex flex-col bg-neutral-950 text-neutral-200 select-none overflow-hidden" role="main" aria-label="Admin Darkroom Workspace">
+    <div class="h-screen flex flex-col bg-neutral-950 text-neutral-200 select-none overflow-hidden" role="main" aria-label="Admin Photography Darkroom">
       <!-- Top Workspace Nav Bar -->
       <header class="h-14 px-6 border-b border-neutral-800/80 flex items-center justify-between shrink-0 bg-neutral-950/90 backdrop-blur-xl">
         <div class="flex items-center gap-4">
-          <span class="w-2.5 h-2.5 rounded-full bg-warm-amber"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
           <h1 class="text-xs font-mono uppercase tracking-widest text-neutral-100 font-semibold">
-            Theng Nioh &bull; Admin Studio
+            Theng Nioh &bull; Portfolio Admin Studio
           </h1>
           <span class="text-[11px] font-mono text-neutral-500 border-l border-neutral-800 pl-4">
-            Storage: {{ draftStorage.storageQuota().percentageUsed }}% used
+            {{ stagedPhotos().length }} Photos in Library
           </span>
         </div>
 
@@ -80,19 +86,19 @@ type InspectorTab = 'info' | 'publish';
 
       <!-- 3-Column Studio Body -->
       <div class="flex-1 flex overflow-hidden">
-        <!-- Column 1: Left Library & Ingest Queue -->
+        <!-- Column 1: Left Library & Upload Queue -->
         <aside class="w-80 border-r border-neutral-800/80 flex flex-col bg-neutral-950/60 shrink-0">
           <!-- Ingest Header & Dropzone Trigger -->
           <div class="p-4 border-b border-neutral-800/80 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">Library Queue</span>
-              <span class="text-xs font-mono text-emerald-400">{{ stagedPhotos().length }} staged</span>
+              <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">Photographs</span>
+              <span class="text-xs font-mono text-emerald-400">{{ stagedPhotos().length }} loaded</span>
             </div>
 
-            <!-- Drop Zone File Picker -->
-            <label class="block p-3 rounded-xl border border-dashed border-neutral-700 bg-neutral-900/40 hover:bg-neutral-900/80 text-center cursor-pointer transition-colors">
-              <span class="text-xs font-mono text-neutral-300 block font-semibold">+ Upload Images</span>
-              <span class="text-[10px] font-mono text-neutral-500 block mt-0.5">JPEG / WebP / PNG / AVIF</span>
+            <!-- Upload Picker -->
+            <label class="block p-3 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-950/10 hover:bg-emerald-950/20 text-center cursor-pointer transition-colors group">
+              <span class="text-xs font-mono text-emerald-300 block font-semibold group-hover:text-emerald-200">+ Upload Photographs</span>
+              <span class="text-[10px] font-mono text-neutral-500 block mt-0.5">JPEG, WebP, PNG, AVIF</span>
               <input type="file" multiple accept="image/*" (change)="onFilesDropped($event)" class="sr-only" />
             </label>
           </div>
@@ -103,16 +109,29 @@ type InspectorTab = 'info' | 'publish';
               <div
                 (click)="selectPhoto(photo)"
                 [class.bg-neutral-800]="selectedPhoto()?.id === photo.id"
-                [class.border-emerald-500/40]="selectedPhoto()?.id === photo.id"
-                class="p-2 rounded-xl flex items-center gap-3 cursor-pointer border border-transparent hover:bg-neutral-900/80 transition-colors"
+                [class.border-emerald-500/50]="selectedPhoto()?.id === photo.id"
+                class="p-2 rounded-xl flex items-center gap-3 cursor-pointer border border-transparent hover:bg-neutral-900/80 transition-colors group"
               >
-                <div class="w-12 h-8 rounded bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800">
-                  <app-photo-canvas [photo]="photo" [interactive]="false" class="w-full h-full block"></app-photo-canvas>
+                <!-- Thumbnail Image (Direct lightweight img tag) -->
+                <div class="w-12 h-10 rounded bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800 flex items-center justify-center">
+                  <img
+                    [src]="photo.placeholder || photo.sources.variants[0]?.urls?.[0]"
+                    [alt]="photo.title"
+                    class="w-full h-full object-cover"
+                  />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <span class="text-xs font-serif text-neutral-200 block truncate">{{ photo.title }}</span>
-                  <span class="text-[10px] font-mono text-neutral-500 block truncate">{{ photo.slug }}</span>
+                  <span class="text-xs font-serif text-neutral-200 block truncate font-medium">{{ photo.title }}</span>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[10px] font-mono text-neutral-500 truncate">{{ photo.slug }}</span>
+                    <span class="text-[9px] font-mono px-1 rounded bg-neutral-800/80 text-neutral-400">{{ formatAspectLabel(photo.aspect) }}</span>
+                  </div>
                 </div>
+              </div>
+            } @empty {
+              <div class="py-12 px-4 text-center text-neutral-500 font-mono text-xs">
+                <p>No photographs in catalog.</p>
+                <p class="text-[10px] text-neutral-600 mt-1">Upload an image to start publishing.</p>
               </div>
             }
           </div>
@@ -121,10 +140,10 @@ type InspectorTab = 'info' | 'publish';
         <!-- Column 2: Centre Canvas Viewport -->
         <main class="flex-1 bg-black flex flex-col relative overflow-hidden" role="region" aria-label="Darkroom Canvas">
           <!-- Top Floating Aspect Ratio & Rotation Toolbar -->
-          <div class="h-10 border-b border-neutral-800/80 px-4 flex items-center justify-between text-xs font-mono bg-neutral-950/80 shrink-0 z-10">
-            <!-- Aspect Ratio Selector -->
-            <div class="flex items-center gap-1 overflow-x-auto py-1">
-              <span class="text-[10px] text-neutral-500 uppercase mr-1">Aspect:</span>
+          <div class="border-b border-neutral-800/80 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono bg-neutral-950/80 shrink-0 z-10">
+            <!-- Aspect Ratio Selector Buttons -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] text-neutral-500 uppercase mr-1">Size / Framing:</span>
               @for (r of aspectRatios; track r.id) {
                 <button
                   type="button"
@@ -132,31 +151,44 @@ type InspectorTab = 'info' | 'publish';
                   [class.bg-emerald-500]="selectedAspectId() === r.id"
                   [class.text-neutral-950]="selectedAspectId() === r.id"
                   [class.font-bold]="selectedAspectId() === r.id"
-                  [class.text-neutral-400]="selectedAspectId() !== r.id"
-                  class="px-2 py-0.5 rounded text-[11px] hover:bg-neutral-800 transition-colors whitespace-nowrap"
+                  [class.text-neutral-300]="selectedAspectId() !== r.id"
+                  class="px-2.5 py-1 rounded text-[11px] bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 transition-colors whitespace-nowrap"
                 >
                   {{ r.label }}
                 </button>
               }
             </div>
 
-            <!-- Rotation & Flip Controls -->
-            <div class="flex items-center gap-1.5 shrink-0 pl-2 border-l border-neutral-800">
+            <!-- Fit Mode & Orientation Controls -->
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Fit vs Fill toggle -->
+              <button
+                type="button"
+                (click)="toggleFitMode()"
+                class="px-2.5 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px]"
+                title="Toggle between Crop to Fill and Fit Inside"
+              >
+                {{ fitMode() === 'cover' ? 'Crop to Fill' : 'Fit Entire Photo' }}
+              </button>
+
+              <div class="w-px h-4 bg-neutral-800"></div>
+
+              <!-- Rotate & Flip -->
               <button
                 type="button"
                 (click)="rotateCounterClockwise()"
-                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs flex items-center gap-1"
+                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs"
                 title="Rotate 90° Counter-Clockwise"
               >
-                <span>↺</span> -90°
+                ↺ -90°
               </button>
               <button
                 type="button"
                 (click)="rotateClockwise()"
-                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs flex items-center gap-1"
+                class="px-2 py-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs"
                 title="Rotate 90° Clockwise"
               >
-                <span>↻</span> +90°
+                ↻ +90°
               </button>
               <button
                 type="button"
@@ -170,17 +202,18 @@ type InspectorTab = 'info' | 'publish';
             </div>
           </div>
 
-          <!-- Center Canvas -->
+          <!-- Center Canvas Display -->
           @if (selectedPhoto(); as photo) {
             <div class="flex-1 flex items-center justify-center p-6 relative overflow-auto">
               <div
-                class="rounded-2xl overflow-hidden glass-card shadow-2xl relative transition-all duration-300 flex items-center justify-center"
+                class="rounded-2xl overflow-hidden glass-card shadow-2xl relative transition-all duration-300 flex items-center justify-center bg-neutral-950"
                 [style.aspectRatio]="activeAspectRatio()"
                 style="max-width: min(85vw, 920px); max-height: calc(100vh - 12rem); width: 100%; height: auto;"
               >
                 <app-photo-canvas
                   [photo]="photo"
                   [interactive]="true"
+                  [fitMode]="fitMode()"
                   [rotation]="photoRotation()"
                   [flipH]="isFlippedH()"
                   class="w-full h-full block"
@@ -188,36 +221,44 @@ type InspectorTab = 'info' | 'publish';
               </div>
             </div>
           } @else {
-            <div class="flex-1 flex items-center justify-center text-neutral-600 font-mono text-xs">
-              Select or upload a photograph to frame and publish.
+            <div class="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
+              <div class="w-12 h-12 rounded-full border border-neutral-800 flex items-center justify-center text-neutral-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <p class="font-serif text-lg text-neutral-300">No photograph selected</p>
+              <p class="font-mono text-xs text-neutral-500 max-w-sm">
+                Upload a photograph from the left panel or click any staged photo to frame, edit, and publish.
+              </p>
             </div>
           }
 
           <!-- Bottom Status Strip -->
           <footer class="h-8 border-t border-neutral-800/80 px-4 flex items-center justify-between text-[11px] font-mono text-neutral-500 bg-neutral-950/80 shrink-0">
-            <span>Direct Portfolio Pipeline &bull; Zero Backend &bull; $0 Hosting</span>
+            <span>Direct Photography Pipeline &bull; Zero Backend &bull; $0 Hosting</span>
             <span>Draft: {{ draftStorage.lastSavedAt() ? 'Autosaved' : 'Ready' }}</span>
           </footer>
         </main>
 
-        <!-- Column 3: Right Tabbed Inspector -->
+        <!-- Column 3: Right Tabbed Inspector (Full Post Editing & Publishing) -->
         <aside class="w-96 border-l border-neutral-800/80 flex flex-col bg-neutral-950/60 shrink-0">
           @if (selectedPhoto(); as photo) {
-            <!-- Tab Headers (Streamlined 2-Step Workflow) -->
+            <!-- Tab Headers -->
             <div class="h-10 border-b border-neutral-800/80 px-2 flex items-center gap-1 shrink-0 bg-neutral-950">
               <button
                 type="button"
                 (click)="activeTab.set('info')"
                 [class.active-subtab]="activeTab() === 'info'"
-                class="subtab-btn flex-1 text-center"
+                class="subtab-btn flex-1 text-center font-semibold"
               >
-                1. Framing & Details
+                1. Edit Post & Details
               </button>
               <button
                 type="button"
                 (click)="activeTab.set('publish')"
                 [class.active-subtab]="activeTab() === 'publish'"
-                class="subtab-btn flex-1 text-center"
+                class="subtab-btn flex-1 text-center font-semibold"
               >
                 2. Publish & Deploy
               </button>
@@ -225,7 +266,7 @@ type InspectorTab = 'info' | 'publish';
 
             <!-- Tab Content -->
             <div class="flex-1 overflow-y-auto p-4 space-y-4">
-              <!-- Tab 1: Framing & Details -->
+              <!-- Tab 1: Edit Post & Details -->
               @if (activeTab() === 'info') {
                 <div class="space-y-3 font-mono text-xs">
                   <div>
@@ -235,40 +276,60 @@ type InspectorTab = 'info' | 'publish';
                       [(ngModel)]="photo.title"
                       (ngModelChange)="onTitleChange($event)"
                       class="admin-input"
+                      placeholder="e.g. Graded portrait"
                     />
                   </div>
 
                   <div>
                     <label class="text-[10px] text-neutral-500 uppercase block mb-1">
-                      Alt Text <span class="text-safelight-red">* Required</span>
+                      Short Caption / Subtitle
+                    </label>
+                    <input
+                      type="text"
+                      [(ngModel)]="photo.caption"
+                      (ngModelChange)="syncCurrentPhoto()"
+                      class="admin-input"
+                      placeholder="Brief one-line subtitle..."
+                    />
+                  </div>
+
+                  <div>
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">
+                      Full Description / Story
                     </label>
                     <textarea
-                      rows="2"
-                      [(ngModel)]="photo.alt"
+                      rows="3"
+                      [(ngModel)]="photo.longDescription"
+                      (ngModelChange)="syncCurrentPhoto()"
                       class="admin-input"
-                      placeholder="Mandatory accessible visual description for screen readers..."
+                      placeholder="Detailed story, background context, technical notes..."
                     ></textarea>
                   </div>
 
                   <div>
-                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">Slug (URL path)</label>
-                    <input
-                      type="text"
-                      [(ngModel)]="photo.slug"
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">
+                      Accessible Alt Text <span class="text-safelight-red">* Required</span>
+                    </label>
+                    <textarea
+                      rows="2"
+                      [(ngModel)]="photo.alt"
+                      (ngModelChange)="syncCurrentPhoto()"
                       class="admin-input"
-                    />
+                      placeholder="Mandatory visual description for screen readers and SEO..."
+                    ></textarea>
                   </div>
 
                   <div>
-                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">Copyright Holder</label>
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">Slug (URL Path)</label>
                     <input
                       type="text"
-                      [(ngModel)]="photo.rights.copyright"
+                      [(ngModel)]="photo.slug"
+                      (ngModelChange)="syncCurrentPhoto()"
                       class="admin-input"
                     />
                   </div>
 
-                  <!-- Aspect Ratio Selector Box -->
+                  <!-- Aspect Ratio Selector in Panel -->
                   <div class="pt-2 border-t border-neutral-800">
                     <label class="text-[10px] text-neutral-500 uppercase block mb-1.5">Framing Aspect Ratio</label>
                     <div class="grid grid-cols-4 gap-1">
@@ -278,7 +339,8 @@ type InspectorTab = 'info' | 'publish';
                           (click)="setAspectRatio(r.value, r.id)"
                           [class.border-emerald-400]="selectedAspectId() === r.id"
                           [class.text-emerald-400]="selectedAspectId() === r.id"
-                          class="p-1 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-center"
+                          [class.font-bold]="selectedAspectId() === r.id"
+                          class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-center"
                         >
                           {{ r.label }}
                         </button>
@@ -286,40 +348,51 @@ type InspectorTab = 'info' | 'publish';
                     </div>
                   </div>
 
-                  <!-- Rotation Controls Box -->
+                  <!-- Tags -->
                   <div class="pt-2 border-t border-neutral-800">
-                    <label class="text-[10px] text-neutral-500 uppercase block mb-1.5">Orientation</label>
-                    <div class="grid grid-cols-3 gap-1.5">
-                      <button
-                        type="button"
-                        (click)="rotateCounterClockwise()"
-                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
-                      >
-                        ↺ -90°
-                      </button>
-                      <button
-                        type="button"
-                        (click)="rotateClockwise()"
-                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
-                      >
-                        ↻ +90°
-                      </button>
-                      <button
-                        type="button"
-                        (click)="toggleFlipH()"
-                        [class.border-emerald-400]="isFlippedH()"
-                        class="p-1.5 rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-[10px] text-neutral-300 text-center"
-                      >
-                        ⇄ Flip
-                      </button>
-                    </div>
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">Tags (Comma-separated)</label>
+                    <input
+                      type="text"
+                      [ngModel]="photo.tags.join(', ')"
+                      (ngModelChange)="onTagsChange($event)"
+                      class="admin-input"
+                      placeholder="portrait, warm, studio, leica"
+                    />
                   </div>
 
-                  <div class="pt-3">
+                  <!-- Copyright -->
+                  <div>
+                    <label class="text-[10px] text-neutral-500 uppercase block mb-1">Copyright Holder</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="photo.rights.copyright"
+                      (ngModelChange)="syncCurrentPhoto()"
+                      class="admin-input"
+                    />
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="pt-3 space-y-2">
+                    <button
+                      type="button"
+                      (click)="saveDraft()"
+                      class="w-full py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>💾</span> Save Changes
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="deleteSelectedPhoto()"
+                      class="w-full py-1.5 rounded-xl bg-red-950/30 hover:bg-red-900/40 text-safelight-red border border-red-500/20 font-mono text-[11px] transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>🗑</span> Delete Photograph
+                    </button>
+
                     <button
                       type="button"
                       (click)="activeTab.set('publish')"
-                      class="w-full py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                      class="w-full py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                     >
                       Continue to Publish &rarr;
                     </button>
@@ -335,22 +408,22 @@ type InspectorTab = 'info' | 'publish';
                     <span class="text-neutral-400 uppercase text-[10px] block">Publishing Verification</span>
                     <div class="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 space-y-2 text-[11px]">
                       <div class="flex items-center justify-between">
+                        <span class="text-neutral-400">Title</span>
+                        <span class="text-neutral-200 font-medium truncate max-w-[180px]">{{ photo.title }}</span>
+                      </div>
+                      <div class="flex items-center justify-between">
                         <span class="text-neutral-400">Alt text</span>
                         <span [class.text-emerald-400]="photo.alt.trim().length > 0" [class.text-safelight-red]="photo.alt.trim().length === 0">
                           {{ photo.alt.trim().length > 0 ? '✓ Valid' : '✗ Required' }}
                         </span>
                       </div>
                       <div class="flex items-center justify-between">
+                        <span class="text-neutral-400">Aspect Ratio</span>
+                        <span class="text-emerald-400">{{ activeAspectRatio().toFixed(2) }} ({{ selectedAspectId() }})</span>
+                      </div>
+                      <div class="flex items-center justify-between">
                         <span class="text-neutral-400">Copyright</span>
                         <span class="text-emerald-400">✓ Declared</span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span class="text-neutral-400">Aspect Ratio</span>
-                        <span class="text-emerald-400">{{ activeAspectRatio().toFixed(2) }}</span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span class="text-neutral-400">Variants</span>
-                        <span class="text-emerald-400">✓ Generated</span>
                       </div>
                     </div>
                   </div>
@@ -369,16 +442,16 @@ type InspectorTab = 'info' | 'publish';
                       type="button"
                       (click)="downloadCatalogShard()"
                       class="w-full py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-mono text-[11px] transition-colors"
-                      title="Download 2026-11.json shard file"
+                      title="Download updated 2026-11.json shard file"
                     >
-                      💾 Download Catalog Shard (2026-11.json)
+                      💾 Download Catalog File (2026-11.json)
                     </button>
                   </div>
 
                   <!-- Deployment Commands -->
                   <div class="p-3 rounded-xl bg-black border border-neutral-800 space-y-1.5">
                     <div class="flex items-center justify-between text-[10px] text-neutral-500 uppercase">
-                      <span>Live Deploy Command</span>
+                      <span>Deploy Command</span>
                       <button
                         type="button"
                         (click)="copyGitCommands()"
@@ -394,7 +467,7 @@ type InspectorTab = 'info' | 'publish';
                   @if (publishSuccessMessage()) {
                     <div class="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 space-y-1">
                       <p class="font-bold flex items-center gap-1.5">
-                        <span>✓</span> Published to Catalog!
+                        <span>✓</span> Success
                       </p>
                       <p class="text-[10px] text-emerald-400/80 leading-relaxed">
                         {{ publishSuccessMessage() }}
@@ -406,7 +479,7 @@ type InspectorTab = 'info' | 'publish';
             </div>
           } @else {
             <div class="p-6 text-center text-neutral-600 font-mono text-xs">
-              No photo selected.
+              No photograph selected.
             </div>
           }
         </aside>
@@ -472,19 +545,20 @@ export class AdminShellComponent implements OnInit {
   readonly selectedPhoto = signal<PhotoItem | null>(null);
   readonly activeTab = signal<InspectorTab>('info');
   readonly publishSuccessMessage = signal<string | null>(null);
+  readonly fitMode = signal<'cover' | 'contain'>('cover');
 
   readonly showShortcuts = signal(false);
   readonly showPublishWizard = signal(false);
 
-  readonly aspectRatios = [
-    { id: 'orig', label: 'Original', value: 0 },
-    { id: '1:1', label: '1:1 Square', value: 1.0 },
-    { id: '4:5', label: '4:5 Portrait', value: 0.8 },
-    { id: '2:3', label: '2:3 Portrait', value: 2 / 3 },
-    { id: '3:2', label: '3:2 Classic', value: 1.5 },
-    { id: '16:9', label: '16:9 Wide', value: 16 / 9 },
-    { id: '9:16', label: '9:16 Story', value: 9 / 16 },
-    { id: '4:3', label: '4:3 Digital', value: 4 / 3 },
+  readonly aspectRatios: AspectOption[] = [
+    { id: 'orig', label: 'Fit Original', value: 0 },
+    { id: '1:1', label: 'Square (1:1)', value: 1.0 },
+    { id: '9:16', label: 'Story (9:16)', value: 9 / 16 },
+    { id: '16:9', label: 'Wide (16:9)', value: 16 / 9 },
+    { id: '4:5', label: 'Portrait (4:5)', value: 0.8 },
+    { id: '2:3', label: 'Vertical (2:3)', value: 2 / 3 },
+    { id: '3:2', label: 'Classic (3:2)', value: 1.5 },
+    { id: '4:3', label: 'Standard (4:3)', value: 4 / 3 },
   ];
   readonly selectedAspectId = signal<string>('orig');
   readonly customAspect = signal<number | null>(null);
@@ -502,6 +576,18 @@ export class AdminShellComponent implements OnInit {
     return isRotatedSideways ? 1 / baseAspect : baseAspect;
   });
 
+  formatAspectLabel(aspect?: number): string {
+    if (!aspect) return 'Orig';
+    if (Math.abs(aspect - 1.0) < 0.05) return '1:1';
+    if (Math.abs(aspect - 9 / 16) < 0.05) return '9:16';
+    if (Math.abs(aspect - 16 / 9) < 0.05) return '16:9';
+    if (Math.abs(aspect - 0.8) < 0.05) return '4:5';
+    if (Math.abs(aspect - 2 / 3) < 0.05) return '2:3';
+    if (Math.abs(aspect - 1.5) < 0.05) return '3:2';
+    if (Math.abs(aspect - 4 / 3) < 0.05) return '4:3';
+    return aspect.toFixed(2);
+  }
+
   setAspectRatio(val: number, id?: string): void {
     if (id) this.selectedAspectId.set(id);
     if (val === 0) {
@@ -513,8 +599,12 @@ export class AdminShellComponent implements OnInit {
     const p = this.selectedPhoto();
     if (p) {
       p.aspect = this.activeAspectRatio();
-      this.syncStagedPhoto(p);
+      this.syncCurrentPhoto();
     }
+  }
+
+  toggleFitMode(): void {
+    this.fitMode.update((m) => (m === 'cover' ? 'contain' : 'cover'));
   }
 
   rotateClockwise(): void {
@@ -522,7 +612,7 @@ export class AdminShellComponent implements OnInit {
     const p = this.selectedPhoto();
     if (p) {
       p.aspect = this.activeAspectRatio();
-      this.syncStagedPhoto(p);
+      this.syncCurrentPhoto();
     }
   }
 
@@ -531,7 +621,7 @@ export class AdminShellComponent implements OnInit {
     const p = this.selectedPhoto();
     if (p) {
       p.aspect = this.activeAspectRatio();
-      this.syncStagedPhoto(p);
+      this.syncCurrentPhoto();
     }
   }
 
@@ -552,20 +642,64 @@ export class AdminShellComponent implements OnInit {
     if (!p) return;
     p.title = newTitle;
     p.slug = newTitle.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    this.syncStagedPhoto(p);
+    this.syncCurrentPhoto();
+  }
+
+  onTagsChange(tagString: string): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.tags = tagString
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => t.length > 0);
+    this.syncCurrentPhoto();
+  }
+
+  syncCurrentPhoto(): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    this.stagedPhotos.update((list) =>
+      list.map((item) => (item.id === p.id ? { ...p } : item))
+    );
+  }
+
+  deleteSelectedPhoto(): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    if (!confirm(`Are you sure you want to delete "${p.title}"?`)) return;
+
+    this.stagedPhotos.update((list) => list.filter((item) => item.id !== p.id));
+    this.catalogState.photos.update((list) => list.filter((item) => item.id !== p.id));
+    this.selectedPhoto.set(this.stagedPhotos()[0] ?? null);
+    this.saveDraft();
+    this.publishSuccessMessage.set(`Deleted "${p.title}" from library.`);
+    setTimeout(() => this.publishSuccessMessage.set(null), 3000);
   }
 
   async ngOnInit(): Promise<void> {
+    // 1. Load catalog index from disk/server
+    if (this.catalogState.photos().length === 0) {
+      await this.catalogState.loadIndex();
+    }
+
+    // 2. Filter out any legacy sample placeholders (ids starting with f1a9c3d4e5b600)
+    const initialCatalog = this.catalogState
+      .photos()
+      .filter((p) => !p.id.startsWith('f1a9c3d4e5b600'));
+    this.catalogState.photos.set(initialCatalog);
+
+    // 3. Load recovered drafts, filtering out legacy sample placeholders
     const recovered = await this.draftStorage.loadDraft();
-    if (recovered && recovered.length > 0) {
-      this.stagedPhotos.set(recovered);
-      this.selectedPhoto.set(recovered[0]);
+    const cleanRecovered = (recovered || []).filter(
+      (p) => !p.id.startsWith('f1a9c3d4e5b600')
+    );
+
+    if (cleanRecovered.length > 0) {
+      this.stagedPhotos.set(cleanRecovered);
+      this.selectedPhoto.set(cleanRecovered[0]);
     } else {
-      if (this.catalogState.photos().length === 0) {
-        await this.catalogState.loadIndex();
-      }
-      this.stagedPhotos.set([...this.catalogState.photos()]);
-      this.selectedPhoto.set(this.catalogState.photos()[0] ?? null);
+      this.stagedPhotos.set([...initialCatalog]);
+      this.selectedPhoto.set(initialCatalog[0] ?? null);
     }
     await this.draftStorage.updateQuotaMeter();
   }
@@ -622,6 +756,8 @@ export class AdminShellComponent implements OnInit {
         id,
         slug,
         title,
+        caption: '',
+        longDescription: '',
         alt: `Fine art photograph: ${title}`,
         aspect: width / height,
         width,
@@ -674,38 +810,29 @@ export class AdminShellComponent implements OnInit {
       this.selectedPhoto.set(newPhotos[0]);
     }
     input.value = '';
-  }
-
-  private syncStagedPhoto(updated: PhotoItem): void {
-    this.stagedPhotos.update((list) =>
-      list.map((item) => (item.id === updated.id ? updated : item))
-    );
+    await this.saveDraft();
   }
 
   async saveDraft(): Promise<void> {
     await this.draftStorage.saveDraft(this.stagedPhotos());
-    this.publishSuccessMessage.set('Draft autosaved locally in browser.');
+    this.publishSuccessMessage.set('Draft saved locally in browser.');
     setTimeout(() => this.publishSuccessMessage.set(null), 3000);
   }
 
   publishDirectly(): void {
-    const current = this.catalogState.photos();
-    const existingIds = new Set(current.map((p) => p.id));
-    const newItems = this.stagedPhotos().filter((p) => !existingIds.has(p.id));
-
-    // Update catalog state
-    const merged = [...newItems, ...current];
-    this.catalogState.photos.set(merged);
+    const staged = this.stagedPhotos();
+    this.catalogState.photos.set([...staged]);
     this.saveDraft();
 
     const title = this.selectedPhoto()?.title || 'Selected photograph';
     this.publishSuccessMessage.set(
-      `"${title}" added to active portfolio. Download the shard below or run git push to deploy live!`
+      `"${title}" updated in active catalog. Download the shard below or push to GitHub to deploy live!`
     );
   }
 
   downloadCatalogShard(): void {
     const shardData = {
+      shardId: '2026-11',
       generatedAt: new Date().toISOString(),
       photos: this.catalogState.photos(),
     };
@@ -716,7 +843,7 @@ export class AdminShellComponent implements OnInit {
     a.download = '2026-11.json';
     a.click();
     URL.revokeObjectURL(url);
-    this.publishSuccessMessage.set('2026-11.json downloaded. Move it into public/catalog/shards/ and git push!');
+    this.publishSuccessMessage.set('2026-11.json downloaded. Replace public/catalog/shards/2026-11.json and git push!');
   }
 
   copyGitCommands(): void {
