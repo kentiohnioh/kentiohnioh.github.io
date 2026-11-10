@@ -220,3 +220,4 @@ export function extractPaletteFromRgba(
 
   return swatches.slice(0, 5);
 }
+

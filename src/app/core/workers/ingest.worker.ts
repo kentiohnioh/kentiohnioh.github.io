@@ -19,3 +19,4 @@ addEventListener('message', async ({ data }) => {
     postMessage({ type: 'error', id, error: errorMsg });
   }
 });
+

@@ -130,3 +130,4 @@ if (totalFailed > 0) {
   console.log('\n✅ All URLs verified with HTTP 200, matching SHA-256, and CORS access headers!');
   process.exit(0);
 }
+

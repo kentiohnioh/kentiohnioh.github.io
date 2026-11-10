@@ -117,3 +117,4 @@ export function meetsPerceptualFloor(
     ssim: Math.round(ssim * 10000) / 10000,
   };
 }
+

@@ -89,3 +89,4 @@ export function inferMoodTags(metrics: ImageTelemetryMetrics): string[] {
 
   return tags.length > 0 ? tags : ['natural'];
 }
+

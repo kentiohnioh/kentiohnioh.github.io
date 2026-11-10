@@ -2,12 +2,13 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CatalogStateService } from '../../core/services/catalog-state.service';
-import { PhotoItem } from '../../core/models/catalog.model';
+import { AmbientGlowService } from '../../core/services/ambient-glow.service';
+import { PhotoCanvasComponent } from '../../shared/ui/photo-canvas/photo-canvas.component';
 
 @Component({
   selector: 'app-gallery-shell',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PhotoCanvasComponent],
   template: `
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" aria-label="Visual Gallery">
       <!-- Loading and Error States -->
@@ -91,25 +92,27 @@ import { PhotoItem } from '../../core/models/catalog.model';
           </div>
         }
 
-        <!-- Gallery Grid (Accessible, Canvas-ready presentation) -->
+        <!-- Gallery Grid (Canvas-rendered Protected Delivery, zero <img> tags) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (photo of catalogState.filteredPhotos(); track photo.id) {
-            <article class="group relative flex flex-col glass-card rounded-lg overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+            <article
+              (mouseenter)="onPhotoHover(photo)"
+              class="group relative flex flex-col glass-card rounded-lg overflow-hidden transition-transform duration-300 hover:-translate-y-1"
+            >
               <a
                 [routerLink]="['/photo', photo.slug]"
                 class="block aspect-[3/2] w-full bg-neutral-900 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 [attr.aria-label]="photo.alt"
               >
-                <!-- Deterrence Container: Protected Art (No naked <img> tags; rendered background with canvas protection in Phase 3) -->
-                <div
-                  class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105 pointer-events-none select-none"
-                  [style.backgroundImage]="'url(' + getDisplayUrl(photo) + ')'"
-                  role="img"
-                  [attr.aria-label]="photo.alt"
-                ></div>
+                <!-- Shared GPU Canvas Rendering Surface -->
+                <app-photo-canvas
+                  [photo]="photo"
+                  [interactive]="true"
+                  class="w-full h-full"
+                ></app-photo-canvas>
 
                 <!-- Hover overlay -->
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none">
                   <h2 class="text-neutral-100 font-serif text-lg">{{ photo.title }}</h2>
                   <div class="flex items-center gap-3 text-xs font-mono text-neutral-400 mt-1">
                     @if (photo.exif.lens) {
@@ -125,10 +128,10 @@ import { PhotoItem } from '../../core/models/catalog.model';
                 </div>
               </a>
 
-              <!-- Accessible caption under card -->
+              <!-- Accessible caption under card with real DOM indexable text -->
               <div class="p-3 bg-neutral-950/60 border-t border-neutral-900/60 flex items-center justify-between text-xs font-mono text-neutral-400">
                 <span class="truncate">{{ photo.title }}</span>
-                <span class="text-neutral-600">{{ photo.exif.shutterDisplay || (photo.exif.shutterSeconds ? '1/' + (1/photo.exif.shutterSeconds) : '') }}</span>
+                <span class="text-neutral-600">{{ photo.exif.shutterDisplay || '' }}</span>
               </div>
             </article>
           }
@@ -144,6 +147,7 @@ import { PhotoItem } from '../../core/models/catalog.model';
 })
 export class GalleryShellComponent implements OnInit {
   readonly catalogState = inject(CatalogStateService);
+  private readonly glowService = inject(AmbientGlowService);
   private readonly route = inject(ActivatedRoute);
 
   ngOnInit(): void {
@@ -152,12 +156,19 @@ export class GalleryShellComponent implements OnInit {
     });
 
     if (this.catalogState.photos().length === 0 && this.catalogState.loadingState() === 'idle') {
-      this.catalogState.loadIndex();
+      this.catalogState.loadIndex().then(() => {
+        const first = this.catalogState.photos()[0];
+        if (first) this.glowService.updateGlowFromPalette(first.palette);
+      });
     }
   }
 
   setMode(mode: 'spatial' | 'sway' | 'contact' | 'zine'): void {
     this.catalogState.setGalleryMode(mode);
+  }
+
+  onPhotoHover(photo: any): void {
+    this.glowService.updateGlowFromPalette(photo.palette);
   }
 
   clearFilters(): void {
@@ -175,10 +186,4 @@ export class GalleryShellComponent implements OnInit {
   retryLoad(): void {
     this.catalogState.loadIndex();
   }
-
-  getDisplayUrl(photo: PhotoItem): string {
-    const v = photo.sources.variants.find((item) => item.width === 1280) || photo.sources.variants[0];
-    return v?.urls[0] || photo.placeholder;
-  }
 }
-

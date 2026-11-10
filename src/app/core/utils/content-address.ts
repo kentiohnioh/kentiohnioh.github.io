@@ -49,3 +49,4 @@ export function buildContentAddressedPath(options: ContentAddressedPathOptions):
 
   return `photos/${monthFolder}/${filename}`;
 }
+

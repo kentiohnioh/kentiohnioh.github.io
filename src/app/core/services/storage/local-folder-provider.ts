@@ -81,3 +81,4 @@ export class LocalFolderProvider implements StorageProvider {
     return this.publicUrl(remotePath);
   }
 }
+

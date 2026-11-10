@@ -104,3 +104,4 @@ describe('ImageSourceLoader (Public Failover Loader)', () => {
     expect(sorted[1]).toContain('failing-primary.com');
   });
 });
+

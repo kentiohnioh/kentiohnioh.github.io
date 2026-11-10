@@ -126,3 +126,4 @@ export class JsDelivrMirrorProvider implements StorageProvider {
     return this.publicUrl(remotePath);
   }
 }
+

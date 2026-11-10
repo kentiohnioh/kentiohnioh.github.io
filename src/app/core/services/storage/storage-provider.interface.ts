@@ -32,3 +32,4 @@ export interface StorageProvider {
    */
   publicUrl(remotePath: string): string;
 }
+

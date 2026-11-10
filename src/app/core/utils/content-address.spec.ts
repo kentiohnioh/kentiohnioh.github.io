@@ -53,3 +53,4 @@ describe('Content-Addressed File Naming & Sharding', () => {
     expect(shardedPath).toBe('photos/2026-11/ab/ab98c44298fc-2048.avif');
   });
 });
+

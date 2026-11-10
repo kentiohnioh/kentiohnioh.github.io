@@ -2,12 +2,14 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CatalogStateService } from '../../core/services/catalog-state.service';
+import { AmbientGlowService } from '../../core/services/ambient-glow.service';
+import { PhotoCanvasComponent } from '../../shared/ui/photo-canvas/photo-canvas.component';
 import { PhotoItem } from '../../core/models/catalog.model';
 
 @Component({
   selector: 'app-photo-inspector',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PhotoCanvasComponent],
   template: `
     <article class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" aria-label="Photo Inspector">
       <!-- Back Navigation -->
@@ -18,26 +20,26 @@ import { PhotoItem } from '../../core/models/catalog.model';
         >
           <span aria-hidden="true">&larr;</span> Back to Gallery
         </a>
-        <span class="text-xs font-mono text-neutral-600">INSPECTOR HUD</span>
+        <span class="text-xs font-mono text-neutral-600">PHOTO INSPECTOR HUD</span>
       </nav>
 
       @if (photo(); as p) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <!-- Main Visual Viewport -->
+          <!-- Main Visual Viewport with Canvas Protection -->
           <div class="lg:col-span-2 glass-panel p-2 rounded-xl overflow-hidden relative group">
             <div
               class="w-full aspect-[3/2] bg-neutral-950 rounded-lg overflow-hidden relative select-none flex items-center justify-center"
-              role="img"
-              [attr.aria-label]="p.alt"
             >
-              <div
-                class="w-full h-full bg-contain bg-no-repeat bg-center"
-                [style.backgroundImage]="'url(' + getDisplayUrl(p) + ')'"
-              ></div>
+              <app-photo-canvas
+                [photo]="p"
+                [interactive]="false"
+                [watermarkOpacity]="0.08"
+                class="w-full h-full"
+              ></app-photo-canvas>
 
               <!-- Retouched Badge -->
               @if (p.flags.retouched) {
-                <div class="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md border border-emerald-400/30 px-2.5 py-1 rounded text-xs font-mono text-emerald-400">
+                <div class="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md border border-emerald-400/30 px-2.5 py-1 rounded text-xs font-mono text-emerald-400 pointer-events-none">
                   Retouched
                 </div>
               }
@@ -59,7 +61,7 @@ import { PhotoItem } from '../../core/models/catalog.model';
               }
             </div>
 
-            <!-- EXIF Telemetry -->
+            <!-- EXIF Telemetry with Real DOM Indexable Text -->
             <div class="glass-panel p-4 rounded-lg space-y-3">
               <h2 class="text-xs font-mono uppercase tracking-wider text-neutral-400">Camera Telemetry</h2>
               <dl class="grid grid-cols-2 gap-y-2 text-xs font-mono">
@@ -136,6 +138,7 @@ import { PhotoItem } from '../../core/models/catalog.model';
 export class PhotoInspectorComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly catalogState = inject(CatalogStateService);
+  private readonly glowService = inject(AmbientGlowService);
 
   readonly photo = signal<PhotoItem | null>(null);
 
@@ -151,16 +154,9 @@ export class PhotoInspectorComponent implements OnInit {
         this.photo.set(item);
         if (item) {
           this.catalogState.selectPhoto(item.id);
+          this.glowService.updateGlowFromPalette(item.palette);
         }
       }
     });
   }
-
-  getDisplayUrl(photo: PhotoItem): string {
-    const v = photo.sources.variants.find((item) => item.width === 2048) ||
-              photo.sources.variants.find((item) => item.width === 1280) ||
-              photo.sources.variants[0];
-    return v?.urls[0] || photo.placeholder;
-  }
 }
-

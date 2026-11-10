@@ -19,51 +19,65 @@
 
 ## Phase 2: Ingest, Compression and Dual-Cloud Storage
 - **Status**: Completed & Verified
+- **Commit**: `8ef55be`
+
+---
+
+## Phase 3: GPU Rendering Core and Public Delivery
+- **Status**: Completed & Verified
 
 ### What Was Built
-1. **Mathematical Utilities & Core Algorithms**:
-   - `src/app/core/utils/palette.ts`: sRGB to linear conversion, OKLab conversion, OKLCH conversion, K-Means clustering in OKLab space with outlier filtering (ignoring L < 0.06 and L > 0.96) to generate 5 weighted swatches.
-   - `src/app/core/utils/perceptual-metric.ts`: Windowed Structural Similarity Index (SSIM) on luminance channels with configurable perceptual quality floor (`default floor >= 0.985`).
-   - `src/app/core/utils/exif-normalizer.ts`: EXIF parser output normalization (exposure formatting: 0.004 -> "1/250", camera model deduplication, GPS privacy coordinate purging when precision is 'hidden').
-   - `src/app/core/utils/content-address.ts`: SHA-256 computation, immutable path generator (`photos/YYYY-MM/<sha256-first-12>-<width>.<ext>`), and density-based sub-sharding (`photos/YYYY-MM/ab/...` for 5,000+ files).
-   - `src/app/core/utils/mood-heuristics.ts`: Statistical image telemetry (mean luminance, contrast standard deviation, warmth, chroma) generating suggested mood tags.
-2. **Public Failover Loader (`ImageSourceLoader`)**:
-   - Input: ordered `urls[]` (primary Hugging Face, secondary jsDelivr mirror, tertiary R2).
-   - Adaptive timeout: 1.5s on high-speed connections, 2.5s on slow/saveData connections.
-   - Hedged request: Launches secondary mirror if primary does not return first byte within timeout.
-   - AbortController cancellation: Aborts losing in-flight requests as soon as the first succeeds.
-   - Provider health memory: Remembers failing provider host and deprioritizes it for 5 minutes (300,000 ms).
-3. **Storage Provider Abstraction (Admin Studio Only)**:
-   - `StorageProvider` interface (`put`, `exists`, `healthCheck`, `publicUrl`).
-   - `HuggingFaceDatasetProvider`: Git LFS batch commit target with volatile in-memory token management (Rule 7).
-   - `JsDelivrMirrorProvider`: Mirror provider utilizing dedicated GitHub photos repository (`thengnioh-photos`) served over jsDelivr global edge CDN.
-   - `LocalFolderProvider`: File System Access API writing directly into local workspace clone.
-4. **Publish & CORS Verification Tool**:
-   - `scripts/publish.mjs`: Node 20+ pipeline verifying HTTP 200, matching `content-length`, matching SHA-256 hash, and valid `access-control-allow-origin` headers. Supports `--dry-run`.
-5. **Admin Ingest Pipeline & Web Worker**:
-   - `src/app/core/services/ingest-pipeline.ts`: 10-stage processing pipeline (read, SHA-256 hash, `createImageBitmap`, EXIF extraction, OKLab palette, ThumbHash placeholder, multi-resolution ladder 640/1280/2048px, quality guard binary search).
-   - `src/app/core/workers/ingest.worker.ts`: Dedicated Web Worker wrapper communicating progress to admin UI.
+1. **Single Shared WebGL2 Rendering Core** (`src/app/gpu/renderer/gpu-renderer.service.ts`):
+   - Single shared context architecture preventing the 16-context browser limitation.
+   - Standard unit quad geometry (VAO/VBO), uniform caching, and triangular PDF dithering to eliminate 8-bit quantization banding.
+   - Immediate `bitmap.close()` disposal upon texture upload to ensure strict memory isolation.
+   - Capability detection and graceful 2D-canvas degradation fallback.
+   - `webglcontextlost` and `webglcontextrestored` event handlers with reactive state management (`isRestoring`).
+2. **LRU Texture Cache with Byte Budgeting** (`src/app/gpu/renderer/texture-cache.ts`):
+   - Strict GPU memory budgeting (default 256 MB desktop, 128 MB on mobile / low-memory devices).
+   - Monotonic sequential operation counter for sub-millisecond LRU eviction order.
+   - Optimal Level-of-Detail (LOD) variant selection algorithm matching $(onScreenWidth \times devicePixelRatio)$.
+3. **GLSL Shaders** (`src/app/gpu/shaders/`):
+   - `photo.vert.glsl`: Model-view-projection quad transform.
+   - `photo.frag.glsl`: Linear light sampling, exposure compensation, triangular dithering, and subtle corner signature watermark.
+4. **Accessible Ambient Glow System** (`src/app/core/services/ambient-glow.service.ts`):
+   - Derives ambient blurred radial gradients from the active photo's dominant OKLCH palette.
+   - Contrast clamp ($0.10 \le L \le 0.28$, $C \le 0.10$) guaranteeing WCAG 2.2 AA text contrast ratio $\ge 4.5:1$ against `#e8ecf2` body text.
+   - Sets `--ambient-glow-1`, `--ambient-glow-2`, `--ambient-glow-3` on `:root`.
+   - Motion safety: 600ms transitions disabled under `prefers-reduced-motion`.
+5. **Protected Photo Surface (`PhotoCanvasComponent`)** (`src/app/shared/ui/photo-canvas/photo-canvas.component.ts`):
+   - Zero `<img>` elements in public DOM: fetches raw bytes via `ImageSourceLoader` into `Blob` and renders directly via `GpuRendererService`.
+   - Download deterrence: intercepting `contextmenu`, `dragstart`, `selectstart`, `-webkit-touch-callout: none`.
+   - Rate-limited glass toast: *"© Theng Nioh — protected artwork. Contact me for licensing."*
+   - Full accessibility: `role="img"`, `aria-label` from `photo.alt`, hidden long description for screen readers, keyboard focusable (`tabindex="0"`).
+   - Real DOM captions and EXIF telemetry preserved for search indexability.
 
 ### Verification & Measured Evidence
 - **Complete Test Suite**: `npm test` (`ng test --watch false`)
-  - Result: **9 test files passed, 43 tests passed, 0 failures**
-    - `palette.spec.ts`: 4 passed (sRGB/linear accuracy, OKLab coordinates, roundtrip fidelity, 5-swatch K-Means extraction).
-    - `perceptual-metric.spec.ts`: 2 passed (1.0000 on identical, degradation detection below floor).
-    - `exif-normalizer.spec.ts`: 3 passed (shutter speed fractional formatting, camera model cleanup, GPS privacy purging).
-    - `content-address.spec.ts`: 3 passed (SHA-256 consistency, monthly sharding pattern, density-based prefix splitting).
-    - `image-source-loader.spec.ts`: 4 passed (primary load, 404 mirror failover, all-source failure rejection, provider health memory deprioritization).
+  - Result: **12 test files passed, 49 tests passed, 0 failures**
+    - `texture-cache.spec.ts`: 2 passed (monotonic LRU eviction under budget cap, 4-tier LOD selection by DPR).
+    - `ambient-glow.spec.ts`: 2 passed (WCAG 2.2 AA contrast ratio &ge; 4.5:1 verified mathematically against body text, CSS custom property formatting).
+    - `gpu-renderer.spec.ts`: 2 passed (initialization capability detection, 2D canvas fallback path).
+    - `image-source-loader.spec.ts`: 4 passed.
     - `catalog-state.spec.ts`: 8 passed.
     - `catalog-validator.spec.ts`: 15 passed.
+    - `palette.spec.ts`: 4 passed.
+    - `exif-normalizer.spec.ts`: 3 passed.
+    - `content-address.spec.ts`: 3 passed.
+    - `perceptual-metric.spec.ts`: 2 passed.
     - `migrations.spec.ts`: 2 passed.
     - `app.component.spec.ts`: 2 passed.
-- **Publish Dry-Run**: `node scripts/publish.mjs --dry-run`
-  - Result: Evaluated 30 variant URLs; 100% verified.
+- **Zero `<img>` Elements Audit**:
+  - Command: `Select-String -Path "src\app\features\**\*", "src\app\shared\**\*" -Pattern "<img"`
+  - Result: **0 `<img>` elements** across all public gallery, inspector, and navigation views.
 - **Production Build & Bundle Verification**:
-  - `npm run build`: Compiled in 2.7s.
-  - Initial JS Transfer Size: **69.87 KB gzipped**. Total JS: **81.4 KB gzipped** (&le; 180 KB target).
-  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin code, MediaPipe, encoders, or hub client in public dist).
+  - `npm run build`: Compiled in 2.8s.
+  - Initial JS Transfer Size: **70.13 KB gzipped** (well below the &le; 180 KB target).
+  - Total JS Transfer Size: **87.1 KB gzipped**.
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks or forbidden tokens in public dist).
 - **Admin Build**: `npm run build:admin`
   - Result: Compiled successfully with isolated admin chunks.
 
 ### Known Limitations
-- Native AVIF canvas encoding is unsupported across several desktop browser releases; the pipeline feature-detects canvas AVIF capability and defaults to WebP when canvas AVIF encoding is unavailable.
+- Client-side download deterrence stops casual right-click and save shortcuts, but cannot prevent OS-level screen capture or DevTools network extraction (as documented in `docs/LIMITATIONS.md`).
+- Hardware WebGL2 acceleration depends on client GPU support; systems without WebGL2 cleanly fall back to high-quality 2D canvas rendering with grading disabled.
