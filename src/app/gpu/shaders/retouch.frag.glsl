@@ -257,3 +257,4 @@ void main() {
 
   fragColor = vec4(clamp(outColor, 0.0, 1.0), origColor.a);
 }
+

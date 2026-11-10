@@ -59,6 +59,14 @@ export const routes: Routes = [
     title: 'Retouch Studio — Theng Nioh',
   },
   {
+    path: 'admin/color-studio',
+    loadComponent: () =>
+      import('./features/admin/color-studio/color-studio.component').then(
+        (m) => m.ColorStudioComponent
+      ),
+    title: '3D LUT Color Studio — Theng Nioh',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found.component').then(

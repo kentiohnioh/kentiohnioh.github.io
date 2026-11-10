@@ -75,3 +75,4 @@ describe('Retouch Presets and Ethical Caps', () => {
     expect(clamped.backgroundDim).toBe(-50);
   });
 });
+

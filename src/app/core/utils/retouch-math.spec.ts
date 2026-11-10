@@ -93,3 +93,4 @@ describe('Retouch Math Algorithms', () => {
     expect(pixels[blemishIdx + 1]).toBeGreaterThan(130);
   });
 });
+

@@ -107,3 +107,4 @@ describe('RetouchStateService', () => {
     expect(service.visualizeZone()).toBe(-1);
   });
 });
+

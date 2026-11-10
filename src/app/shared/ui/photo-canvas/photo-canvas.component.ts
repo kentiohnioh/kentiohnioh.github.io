@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PhotoItem } from '../../../core/models/catalog.model';
+import { ColorGradeRecipe } from '../../../core/models/color-grade.model';
 import { ImageSourceLoader } from '../../../core/services/image-source-loader.service';
 import { GpuRendererService } from '../../../gpu/renderer/gpu-renderer.service';
 
@@ -75,6 +76,7 @@ export class PhotoCanvasComponent implements OnInit, OnDestroy {
   @Input() interactive = false;
   @Input() exposure = 0.0;
   @Input() watermarkOpacity = 0.0;
+  @Input() recipe?: ColorGradeRecipe | null;
 
   @ViewChild('canvasTarget', { static: true })
   canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -137,6 +139,7 @@ export class PhotoCanvasComponent implements OnInit, OnDestroy {
         cacheKey,
         exposure: this.exposure,
         watermarkOpacity: this.watermarkOpacity,
+        recipe: this.recipe ?? this.photo.grade ?? null,
       });
 
       this.isLoading.set(false);

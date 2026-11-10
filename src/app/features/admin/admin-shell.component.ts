@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
         </a>
       </header>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="glass-panel p-6 rounded-lg space-y-3">
           <h2 class="text-xs font-mono uppercase tracking-wider text-emerald-400">1. Raw Ingest</h2>
           <p class="text-sm text-neutral-400">
@@ -41,7 +41,17 @@ import { RouterLink } from '@angular/router';
         </div>
 
         <div class="glass-panel p-6 rounded-lg space-y-3">
-          <h2 class="text-xs font-mono uppercase tracking-wider text-warm-amber">3. Cloud Publish</h2>
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-mono uppercase tracking-wider text-fuchsia-400">3. 3D LUT Color</h2>
+            <a routerLink="/admin/color-studio" class="text-[10px] font-mono text-fuchsia-400 hover:underline uppercase">Launch Studio &rarr;</a>
+          </div>
+          <p class="text-sm text-neutral-400">
+            5 signature film stocks (Kodachrome, Portra, Tri-X, Fuji, CineStill) with live WebGL2 hardware grading.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-lg space-y-3">
+          <h2 class="text-xs font-mono uppercase tracking-wider text-warm-amber">4. Cloud Publish</h2>
           <p class="text-sm text-neutral-400">
             Hugging Face Dataset commit + mirror verification with SHA-256 and CORS integrity gates.
           </p>

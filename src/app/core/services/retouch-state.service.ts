@@ -220,3 +220,4 @@ export class RetouchStateService {
     this.strokes.set([...entry.strokes]);
   }
 }
+

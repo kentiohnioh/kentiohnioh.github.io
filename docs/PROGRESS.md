@@ -142,6 +142,7 @@
 
 ## Phase 5: Retouch Engine II — Shaders, Sliders & Tools
 - **Status**: Completed & Verified
+- **Commit**: `20a1595`
 
 ### What Was Built
 1. **19 Typed Sliders with Natural Ethical Caps & Presets** (`src/app/core/utils/retouch-presets.ts`):
@@ -189,3 +190,59 @@
 ### Known Limitations
 - Spot healing operates in 2D texture space; complex non-convex donor patch warping requires advanced Poisson blending, planned for a future update.
 - WebGL2 hardware acceleration is required for real-time 60 FPS slider preview; machines without WebGL2 can run offline CPU-rendered exports.
+
+---
+
+## Phase 6: Live WebGL2 Colour Grading, 3D LUTs & Film Profiles
+- **Status**: Completed & Verified
+
+### What Was Built
+1. **Adobe .CUBE 3D/1D Parser, Serializer & Trilinear Sampler** (`src/app/core/utils/cube-lut.ts`):
+   - Strict .CUBE specification parser supporting `LUT_3D_SIZE`, `DOMAIN_MIN`, `DOMAIN_MAX`, comments, and headers.
+   - Serializer generating Adobe-compliant `.cube` text files.
+   - Identity 3D LUT generator (`generateIdentityLut`).
+   - Software trilinear interpolation sampler (`sample3dLut`) for mathematical testing and CPU verification.
+   - 3D LUT voxel to RGBA8 Uint8Array converter (`convertLutToRgba8`) for hardware texture upload.
+2. **5 Signature Photographic Film Stocks** (`src/app/core/utils/film-profiles.ts`):
+   - Full color science profiles and procedural 3D LUT generation for:
+     - `Kodachrome 64`: punchy archival contrast, rich saturated primaries, warm golden highlights, deep blacks.
+     - `Portra 400`: world-standard portraiture stock with creamy skin roll-off, soft pastel highlights, low contrast.
+     - `Tri-X 400`: classic photojournalism monochrome with silver-halide grain response and punchy S-curve.
+     - `Fujifilm Pro 400H`: airy cyan/green highlights, cool ethereal pastels, luminous skin tones.
+     - `CineStill 800T`: tungsten-balanced cinematic stock with rich teal-and-orange split and warm amber glow.
+3. **Pure Algorithmic Color Grading Pipeline** (`src/app/core/utils/color-grade-math.ts`):
+   - Photographic exposure multiplier ($2^{\text{EV}}$).
+   - Planckian locus white balance: Temperature (-100 cool to +100 warm) and Tint (-100 green to +100 magenta).
+   - Tone controls: Contrast (midpoint 0.18 S-curve), Highlights, Shadows, Whites, Blacks.
+   - Saturation and Vibrance (selectively protecting already-saturated colors and delicate skin tones).
+   - Split Toning: shadows/highlights hue and saturation with adjustable midpoint balance.
+   - Procedural film grain algorithm with luminance-weighted response curve ($\sin(\pi \cdot L)$, peaked in midtones, quiet in blacks and whites).
+   - Vignette calculation with midpoint, roundness, and feather.
+   - Public skin protection mask blending: ensures portraits retain healthy, natural skin hues under aggressive creative color grades.
+4. **Hardware-Accelerated WebGL2 Grading Shader** (`src/app/gpu/shaders/photo.frag.glsl`, `shaders.ts`, `src/app/gpu/renderer/gpu-renderer.service.ts`):
+   - WebGL2 `#version 300 es` fragment shader with native `sampler3D` support.
+   - Half-texel offset for boundary-safe trilinear voxel interpolation: `(color * (size - 1.0) + 0.5) / size`.
+   - Dynamic 3D LUT texture caching (`getOrCreate3dLut`) eliminating runtime texture allocation.
+   - Public skin protection mask integration: dynamically samples single-channel alpha mask texture on Unit 2.
+   - Full 60 FPS live rendering pipeline in `PhotoCanvasComponent` consuming `photo.grade` or external `recipe`.
+5. **Interactive 3D LUT Color Studio** (`src/app/features/admin/color-studio/color-studio.component.ts`):
+   - Dedicated darkroom tool at `/admin/color-studio`.
+   - Real-time film stock switching and 3D LUT strength slider.
+   - Full live grading controls (temperature, tint, exposure, contrast, highlights, shadows, vibrance, saturation, skin protection, grain, vignette).
+   - One-click "Copy Recipe JSON" to clipboard.
+
+### Verification & Measured Evidence
+- **Complete Test Suite**: `npm test` (`ng test --watch false`)
+  - Result: **22 test files passed, 93 tests passed, 0 failures**
+    - `cube-lut.spec.ts`: 6 passed (identity generation, trilinear interpolation across arbitrary coordinates, serialize/parse roundtrip, comment parsing, error handling on corrupt cube, RGBA8 conversion).
+    - `film-profiles.spec.ts`: 5 passed (metadata validation across all 5 stocks, Tri-X 400 complete desaturation to monochrome, Kodachrome high contrast, Portra 400 skin protection, CineStill teal-orange split).
+    - `color-grade-math.spec.ts`: 7 passed (EV doubling/halving, temperature/tint, contrast around 0.18, vibrance selective protection, film grain bell curve, vignette falloff, skin mask protection).
+    - `gpu-renderer.spec.ts`: 3 passed (capability detection, 2D fallback with recipe, graceful 3D LUT handling).
+- **Bundle Tree-Shaking & Isolation Verification**:
+  - `npm run build`: Production build completed cleanly in 2.5s.
+  - `node scripts/verify-bundle.mjs`: **PASS** (Zero admin chunks, zero forbidden dependencies in public dist).
+  - Public initial bundle: **71.04 KB gzipped** (well below budget of &le; 180 KB).
+  - `npm run build:admin`: Admin build completed cleanly; `color-studio-component` (11.49 KB raw / 3.06 KB gzip) loads strictly on-demand.
+
+### Known Limitations
+- Halation diffusion pass in this phase is computed using the high-frequency luminance threshold and tint; full spatial multi-tap Gaussian bloom on public canvases will be dynamically governed by the Phase 10 performance quality governor when GPU frame times allow.

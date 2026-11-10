@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GpuRendererService } from './gpu-renderer.service';
+import { FILM_PROFILES } from '../../core/utils/film-profiles';
 
 describe('GpuRendererService', () => {
   let renderer: GpuRendererService;
@@ -43,10 +44,16 @@ describe('GpuRendererService', () => {
       canvas: mockCanvas,
       bitmap: mockBitmap,
       cacheKey: 'fallback-test',
+      recipe: FILM_PROFILES['kodachrome-64'].recipe,
     });
 
     expect(mockCanvas.getContext).toHaveBeenCalledWith('2d');
     expect(mock2dCtx.drawImage).toHaveBeenCalled();
   });
-});
 
+  it('handles 3D LUT texture request gracefully when WebGL context is not yet active', () => {
+    // When gl is null, getOrCreate3dLut should return null without throwing
+    const lut = renderer.getOrCreate3dLut('portra-400', 17);
+    expect(lut).toBeNull();
+  });
+});
