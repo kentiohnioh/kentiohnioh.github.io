@@ -16,6 +16,7 @@ import { PhotoItem } from '../../core/models/catalog.model';
 import { PhotoCanvasComponent } from '../../shared/ui/photo-canvas/photo-canvas.component';
 import { PublishWizardComponent } from './publish-wizard/publish-wizard.component';
 import { ShortcutsModalComponent } from './shortcuts-modal/shortcuts-modal.component';
+import { FILM_PROFILES, FilmStockId } from '../../core/utils/film-profiles';
 
 type InspectorTab = 'info' | 'retouch' | 'grade' | 'publish';
 
@@ -238,16 +239,97 @@ type InspectorTab = 'info' | 'retouch' | 'grade' | 'publish';
 
               @if (activeTab() === 'retouch') {
                 <div class="space-y-4 text-xs font-mono">
-                  <div class="p-3 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2">
-                    <span class="text-neutral-400 block font-semibold">12-Zone Retouch Engine</span>
-                    <p class="text-neutral-500 text-[11px]">
-                      Open the full dedicated Retouch Studio for anatomical brushes, spot healing, and Before/After loupe.
-                    </p>
+                  <div class="p-3 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-neutral-300 font-semibold uppercase text-[10px]">12-Zone Retouch Engine</span>
+                      <span [class.text-emerald-400]="photo.flags.retouched" class="text-[10px]">
+                        {{ photo.flags.retouched ? 'Active' : 'Unretouched' }}
+                      </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        (click)="applyRetouchPreset('Natural Glow')"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200"
+                      >
+                        Natural Glow
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyRetouchPreset('Editorial Clean')"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200"
+                      >
+                        Editorial Clean
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyRetouchPreset('Darkroom Classic')"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200"
+                      >
+                        Darkroom Classic
+                      </button>
+                      <button
+                        type="button"
+                        (click)="resetRetouch()"
+                        class="px-2 py-1.5 rounded bg-red-950/40 text-safelight-red hover:bg-red-900/40 text-[10px]"
+                      >
+                        Reset
+                      </button>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-neutral-800 text-[11px]">
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Skin Softness</span>
+                          <span>{{ getRetouchSlider('skin') }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="50"
+                          [value]="getRetouchSlider('skin')"
+                          (input)="updateRetouchSlider('skin', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Eye Catchlight</span>
+                          <span>{{ getRetouchSlider('eyes') }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="40"
+                          [value]="getRetouchSlider('eyes')"
+                          (input)="updateRetouchSlider('eyes', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Teeth Brightness</span>
+                          <span>{{ getRetouchSlider('teeth') }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="30"
+                          [value]="getRetouchSlider('teeth')"
+                          (input)="updateRetouchSlider('teeth', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
                     <a
                       routerLink="/admin/retouch-studio"
-                      class="inline-block mt-2 px-3 py-1.5 rounded-lg bg-ice-blue/20 text-ice-blue border border-ice-blue/30 uppercase text-[10px] font-bold"
+                      class="block text-center mt-2 px-3 py-1.5 rounded-lg bg-ice-blue/20 text-ice-blue border border-ice-blue/30 uppercase text-[10px] font-bold"
                     >
-                      Open Retouch Studio &rarr;
+                      Open Full Retouch Studio &rarr;
                     </a>
                   </div>
                 </div>
@@ -255,16 +337,114 @@ type InspectorTab = 'info' | 'retouch' | 'grade' | 'publish';
 
               @if (activeTab() === 'grade') {
                 <div class="space-y-4 text-xs font-mono">
-                  <div class="p-3 bg-neutral-900 rounded-lg border border-neutral-800 space-y-2">
-                    <span class="text-neutral-400 block font-semibold">3D LUT Color Studio</span>
-                    <p class="text-neutral-500 text-[11px]">
-                      Open the live WebGL2 grading suite for Kodachrome, Portra, Tri-X film simulation and skin protection.
-                    </p>
+                  <div class="p-3 bg-neutral-900 rounded-lg border border-neutral-800 space-y-3">
+                    <span class="text-neutral-300 font-semibold uppercase text-[10px] block">3D LUT Film Stocks</span>
+
+                    <div class="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        (click)="applyFilmPreset('portra-400')"
+                        [class.border-emerald-400]="photo.grade?.presetId === 'portra-400'"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200 border border-transparent"
+                      >
+                        Portra 400
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyFilmPreset('tri-x-400')"
+                        [class.border-emerald-400]="photo.grade?.presetId === 'tri-x-400'"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200 border border-transparent"
+                      >
+                        Tri-X 400
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyFilmPreset('kodachrome-64')"
+                        [class.border-emerald-400]="photo.grade?.presetId === 'kodachrome-64'"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200 border border-transparent"
+                      >
+                        Kodachrome 64
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyFilmPreset('fuji-400h')"
+                        [class.border-emerald-400]="photo.grade?.presetId === 'fuji-400h'"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200 border border-transparent"
+                      >
+                        Fuji 400H
+                      </button>
+                      <button
+                        type="button"
+                        (click)="applyFilmPreset('cinestill-800t')"
+                        [class.border-emerald-400]="photo.grade?.presetId === 'cinestill-800t'"
+                        class="px-2 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-neutral-200 border border-transparent"
+                      >
+                        CineStill 800T
+                      </button>
+                      <button
+                        type="button"
+                        (click)="resetGrade()"
+                        class="px-2 py-1.5 rounded bg-red-950/40 text-safelight-red hover:bg-red-900/40 text-[10px]"
+                      >
+                        Clean (None)
+                      </button>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-neutral-800 text-[11px]">
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Exposure EV</span>
+                          <span>{{ (photo.grade?.exposureEV ?? 0).toFixed(1) }}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="-2"
+                          max="2"
+                          step="0.1"
+                          [value]="photo.grade?.exposureEV ?? 0"
+                          (input)="updateGradeProperty('exposureEV', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Contrast</span>
+                          <span>{{ (photo.grade?.contrast ?? 1).toFixed(2) }}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.6"
+                          max="1.4"
+                          step="0.05"
+                          [value]="photo.grade?.contrast ?? 1"
+                          (input)="updateGradeProperty('contrast', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div class="flex justify-between text-neutral-400 mb-0.5">
+                          <span>Film Grain</span>
+                          <span>{{ ((photo.grade?.grain?.amount ?? 0) * 100).toFixed(0) }}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="0.6"
+                          step="0.05"
+                          [value]="photo.grade?.grain?.amount ?? 0"
+                          (input)="updateGradeProperty('grain', $event)"
+                          class="w-full accent-emerald-400 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
                     <a
                       routerLink="/admin/color-studio"
-                      class="inline-block mt-2 px-3 py-1.5 rounded-lg bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 uppercase text-[10px] font-bold"
+                      class="block text-center mt-2 px-3 py-1.5 rounded-lg bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 uppercase text-[10px] font-bold"
                     >
-                      Open Color Studio &rarr;
+                      Open Full Color Studio &rarr;
                     </a>
                   </div>
                 </div>
@@ -402,6 +582,14 @@ export class AdminShellComponent implements OnInit {
       const file = input.files[i];
       const objectUrl = URL.createObjectURL(file);
 
+      // Compute cryptographic 64-char SHA-256 for integrity gates
+      const arrayBuffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const sha256 = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      const id = sha256.substring(0, 16);
+
       // Decode image dimensions
       const img = new Image();
       await new Promise<void>((resolve) => {
@@ -412,7 +600,6 @@ export class AdminShellComponent implements OnInit {
 
       const width = img.naturalWidth || 1920;
       const height = img.naturalHeight || 1080;
-      const id = 'local_' + Math.random().toString(36).substring(2, 10);
       const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       const title = rawName.charAt(0).toUpperCase() + rawName.slice(1);
       const slug = rawName.toLowerCase().replace(/\s+/g, '-');
@@ -454,7 +641,7 @@ export class AdminShellComponent implements OnInit {
               width,
               height,
               bytes: file.size,
-              sha256: id,
+              sha256,
               urls: [objectUrl],
             },
           ],
@@ -475,11 +662,103 @@ export class AdminShellComponent implements OnInit {
     input.value = '';
   }
 
+  applyRetouchPreset(name: string): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.flags.retouched = true;
+    p.retouch = {
+      retouched: true,
+      recipeHash: 'hash_' + Date.now().toString(16),
+      summary: {
+        facesCount: 1,
+        hasExtreme: false,
+        zonesAdjusted: ['FACE_SKIN', 'IRIS_AND_SCLERA'],
+      },
+    };
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  resetRetouch(): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.flags.retouched = false;
+    p.retouch = null;
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  getRetouchSlider(zone: 'skin' | 'eyes' | 'teeth'): number {
+    const p = this.selectedPhoto();
+    if (!p?.flags.retouched) return 0;
+    if (zone === 'skin') return 25;
+    if (zone === 'eyes') return 20;
+    return 15;
+  }
+
+  updateRetouchSlider(zone: 'skin' | 'eyes' | 'teeth', event: Event): void {
+    const val = Number((event.target as HTMLInputElement).value);
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.flags.retouched = val > 0;
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  applyFilmPreset(presetId: string): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    const stockId = presetId as FilmStockId;
+    if (FILM_PROFILES[stockId]) {
+      p.grade = JSON.parse(JSON.stringify(FILM_PROFILES[stockId].recipe));
+    }
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  resetGrade(): void {
+    const p = this.selectedPhoto();
+    if (!p) return;
+    p.grade = null;
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  updateGradeProperty(prop: 'exposureEV' | 'contrast' | 'grain', event: Event): void {
+    const val = Number((event.target as HTMLInputElement).value);
+    const p = this.selectedPhoto();
+    if (!p) return;
+    if (!p.grade) {
+      p.grade = JSON.parse(JSON.stringify(FILM_PROFILES['portra-400'].recipe));
+    }
+    const currentGrade = p.grade!;
+    if (prop === 'grain') {
+      currentGrade.grain.amount = val;
+    } else if (prop === 'exposureEV') {
+      currentGrade.exposureEV = val;
+    } else if (prop === 'contrast') {
+      currentGrade.contrast = val;
+    }
+    this.selectedPhoto.set({ ...p });
+    this.syncStagedPhoto(p);
+  }
+
+  private syncStagedPhoto(updated: PhotoItem): void {
+    this.stagedPhotos.update((list) =>
+      list.map((item) => (item.id === updated.id ? updated : item))
+    );
+  }
+
   async saveDraft(): Promise<void> {
     await this.draftStorage.saveDraft(this.stagedPhotos());
   }
 
   async onPublished(): Promise<void> {
+    const current = this.catalogState.photos();
+    const existingIds = new Set(current.map((p) => p.id));
+    const newItems = this.stagedPhotos().filter((p) => !existingIds.has(p.id));
+    this.catalogState.photos.set([...newItems, ...current]);
     await this.draftStorage.clearDraft();
+    alert('Catalog published! Your staged photos have been added to the catalog. To deploy your new photographs to the live website, run "git add . && git commit -m \'feat: publish new photographs\' && git push" in your terminal.');
   }
 }

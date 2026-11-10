@@ -3,6 +3,8 @@ import {
   ElementRef,
   Input,
   OnInit,
+  OnChanges,
+  SimpleChanges,
   OnDestroy,
   ViewChild,
   inject,
@@ -71,7 +73,7 @@ import { GpuRendererService } from '../../../gpu/renderer/gpu-renderer.service';
     }
   `],
 })
-export class PhotoCanvasComponent implements OnInit, OnDestroy {
+export class PhotoCanvasComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) photo!: PhotoItem;
   @Input() interactive = false;
   @Input() exposure = 0.0;
@@ -93,6 +95,14 @@ export class PhotoCanvasComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadImage();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['photo'] && !changes['photo'].firstChange) {
+      this.loadImage();
+    } else if (changes['recipe'] || changes['exposure'] || changes['watermarkOpacity']) {
+      this.loadImage();
+    }
   }
 
   ngOnDestroy(): void {
